@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/Toast';
 
 interface UnitSpec {
   slot: number;
@@ -36,15 +38,33 @@ const TYPE_COLORS: Record<string, { fill: string; stroke: string; text: string }
   'Empty': { fill: '#1a1a2e', stroke: '#374151', text: 'text-gray-500' },
 };
 
+// Cable routing paths for rear view
+const CABLE_ROUTES = [
+  { from: 'PLC', to: 'DAQ', color: '#a855f7', label: 'Modbus TCP' },
+  { from: 'DAQ', to: 'TC/HF', color: '#3b82f6', label: 'RS-485' },
+  { from: 'DAQ', to: 'LETID', color: '#eab308', label: 'RS-485' },
+  { from: 'DAQ', to: 'PID', color: '#ef4444', label: 'RS-485' },
+];
+
 export default function DesignDrawing() {
+  const { toast } = useToast();
   const [rackCount, setRackCount] = useState(1);
   const [selectedUnit, setSelectedUnit] = useState<UnitSpec | null>(null);
   const [view, setView] = useState<'front' | 'rear'>('front');
+  const [showCableRouting, setShowCableRouting] = useState(false);
 
   const totalUnits = rackCount * 10;
   const tcCount = rackCount * 5;
   const letidCount = rackCount * 2;
   const pidCount = rackCount * 1;
+
+  const handleExportPDF = () => {
+    toast('info', 'PDF export: Design drawing will be generated as a multi-page PDF with front/rear views. (Placeholder - FreeCAD integration pending)');
+  };
+
+  const handleExportDXF = () => {
+    toast('info', 'DXF export: CAD-ready rack layout with dimensions will be generated. (Placeholder - FreeCAD integration pending)');
+  };
 
   return (
     <div className="space-y-6">
@@ -75,6 +95,10 @@ export default function DesignDrawing() {
               onClick={() => setView('rear')}
               className={`px-3 py-1 rounded text-xs font-medium ${view === 'rear' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}
             >Rear</button>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="text-xs h-7" onClick={handleExportPDF}>Export PDF</Button>
+            <Button size="sm" variant="outline" className="text-xs h-7" onClick={handleExportDXF}>Export DXF</Button>
           </div>
         </div>
       </div>
@@ -112,6 +136,56 @@ export default function DesignDrawing() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cable Routing Toggle */}
+      {view === 'rear' && (
+        <Button size="sm" variant="outline" className="text-xs" onClick={() => setShowCableRouting(!showCableRouting)}>
+          {showCableRouting ? 'Hide' : 'Show'} Cable Routing Diagram
+        </Button>
+      )}
+
+      {/* Cable Routing Diagram */}
+      {view === 'rear' && showCableRouting && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Cable Routing Diagram</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <svg viewBox="0 0 500 200" className="w-full max-w-lg mx-auto">
+              {/* PLC */}
+              <rect x="10" y="80" width="80" height="40" rx="4" fill="#3a1e5f" stroke="#a855f7" strokeWidth="1.5" />
+              <text x="50" y="105" textAnchor="middle" fill="#e5e7eb" fontSize="10">PLC</text>
+              {/* DAQ */}
+              <rect x="150" y="80" width="80" height="40" rx="4" fill="#1e5f3a" stroke="#22c55e" strokeWidth="1.5" />
+              <text x="190" y="105" textAnchor="middle" fill="#e5e7eb" fontSize="10">DAQ</text>
+              {/* TC/HF */}
+              <rect x="310" y="10" width="80" height="40" rx="4" fill="#1e3a5f" stroke="#3b82f6" strokeWidth="1.5" />
+              <text x="350" y="35" textAnchor="middle" fill="#e5e7eb" fontSize="10">TC/HF x5</text>
+              {/* LETID */}
+              <rect x="310" y="80" width="80" height="40" rx="4" fill="#3b3a1e" stroke="#eab308" strokeWidth="1.5" />
+              <text x="350" y="105" textAnchor="middle" fill="#e5e7eb" fontSize="10">LETID x2</text>
+              {/* PID */}
+              <rect x="310" y="150" width="80" height="40" rx="4" fill="#5f1e1e" stroke="#ef4444" strokeWidth="1.5" />
+              <text x="350" y="175" textAnchor="middle" fill="#e5e7eb" fontSize="10">PID x1</text>
+              {/* Lines */}
+              <line x1="90" y1="100" x2="150" y2="100" stroke="#a855f7" strokeWidth="2" />
+              <text x="120" y="93" textAnchor="middle" fill="#a855f7" fontSize="7">Modbus TCP</text>
+              <line x1="230" y1="90" x2="310" y2="30" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4" />
+              <text x="270" y="50" textAnchor="middle" fill="#3b82f6" fontSize="7">RS-485</text>
+              <line x1="230" y1="100" x2="310" y2="100" stroke="#eab308" strokeWidth="1.5" strokeDasharray="4" />
+              <text x="270" y="93" textAnchor="middle" fill="#eab308" fontSize="7">RS-485</text>
+              <line x1="230" y1="110" x2="310" y2="170" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4" />
+              <text x="270" y="150" textAnchor="middle" fill="#ef4444" fontSize="7">RS-485</text>
+              {/* Ethernet */}
+              <rect x="420" y="80" width="70" height="40" rx="4" fill="#1a1a2e" stroke="#374151" strokeWidth="1" />
+              <text x="455" y="105" textAnchor="middle" fill="#6b7280" fontSize="9">Ethernet SW</text>
+              <line x1="390" y1="30" x2="420" y2="90" stroke="#374151" strokeWidth="1" strokeDasharray="3" />
+              <line x1="390" y1="100" x2="420" y2="100" stroke="#374151" strokeWidth="1" strokeDasharray="3" />
+              <line x1="390" y1="170" x2="420" y2="110" stroke="#374151" strokeWidth="1" strokeDasharray="3" />
+            </svg>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* SVG Rack Layout */}
@@ -188,7 +262,7 @@ export default function DesignDrawing() {
                           <line key={deg} x1="410" y1={y + 29} x2={410 + 12 * Math.cos(deg * Math.PI / 180)} y2={y + 29 + 12 * Math.sin(deg * Math.PI / 180)} stroke="#374151" strokeWidth="0.8" />
                         ))}
                         {/* Cable routing arrows */}
-                        <line x1="80" y={y + 40} x2="280" y2={y + 40} stroke="#374151" strokeWidth="0.5" strokeDasharray="3" />
+                        <line x1="80" y1={y + 40} x2="280" y2={y + 40} stroke="#374151" strokeWidth="0.5" strokeDasharray="3" />
                         <text x="65" y={y + 44} fill="#4b5563" fontSize="7">Cable routing</text>
                       </g>
                     );
@@ -224,12 +298,57 @@ export default function DesignDrawing() {
                       { label: 'Communication', value: 'Modbus RTU/TCP' },
                       { label: 'Mounting', value: '19" Rack Mount' },
                       { label: 'Sensing', value: selectedUnit.type === 'LETID' ? '4-Wire Kelvin' : 'Standard' },
+                      { label: 'Safety', value: selectedUnit.type === 'PID' ? '5mA Trip Interlock' : 'Standard Fuse' },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex justify-between">
                         <span className="text-gray-500">{label}</span>
                         <span className="text-gray-300 font-mono text-xs">{value}</span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* PSU Details Panel */}
+                  <div className="border-t border-gray-700 pt-3 mt-3 space-y-2">
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Detailed Specifications</p>
+                    {selectedUnit.type === 'TC/HF' && (
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">Topology</span><span className="text-blue-300">Bidirectional Regenerative</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Output Range</span><span className="text-gray-300">0-60V, 0-30A</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Channels</span><span className="text-gray-300">2 per unit</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Regen Efficiency</span><span className="text-green-400">&gt;90%</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Standard</span><span className="text-gray-300">IEC 61215:2021</span></div>
+                      </div>
+                    )}
+                    {selectedUnit.type === 'LETID' && (
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">Output Range</span><span className="text-gray-300">0-60V, 0-2A</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Resolution</span><span className="text-yellow-300">1mV / 0.1mA</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Sensing</span><span className="text-gray-300">4-Wire Kelvin</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Standard</span><span className="text-gray-300">PVEL Protocol</span></div>
+                      </div>
+                    )}
+                    {selectedUnit.type === 'PID' && (
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">Output Range</span><span className="text-gray-300">{'\u00B1'}4000V DC</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Current Range</span><span className="text-gray-300">nA to mA</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Safety</span><span className="text-red-300">5mA leakage trip</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Standard</span><span className="text-gray-300">IEC TS 62804-1:2025</span></div>
+                      </div>
+                    )}
+                    {selectedUnit.type === 'DAQ' && (
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">Channels</span><span className="text-gray-300">20 (expandable to 60)</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Sample Rate</span><span className="text-gray-300">50k readings/s</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Interface</span><span className="text-gray-300">USB, LAN, GPIB</span></div>
+                      </div>
+                    )}
+                    {selectedUnit.type === 'PLC' && (
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">I/O</span><span className="text-gray-300">14DI / 10DO / 2AI</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Comms</span><span className="text-gray-300">Ethernet, RS-485</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Program</span><span className="text-gray-300">TIA Portal V17</span></div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

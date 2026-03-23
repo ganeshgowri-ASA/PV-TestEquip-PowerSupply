@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/Toast';
+import ModuleSelector from '@/components/ModuleSelector';
+import { type PVModule } from '@/data/moduleDatabase';
 
 type TestType = 'TC' | 'HF' | 'LETID' | 'PID';
 
@@ -37,42 +39,65 @@ const DEFAULT_MODULE_SETTINGS = {
   moduleType: 'bifacial' as const, currentMode: 'isc-based' as const, fixedCurrent: 0,
 };
 
+const RECIPE_TEMPLATES: { label: string; recipe: Omit<Recipe, 'id'> }[] = [
+  {
+    label: 'IEC 61215 TC200',
+    recipe: {
+      name: 'TC 200 Cycles - IEC 61215', type: 'TC', standard: 'IEC 61215:2021',
+      params: { tempMin: -40, tempMax: 85, cycles: 200, rampRate: 1.67, dwellTime: 15 },
+      ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
+    },
+  },
+  {
+    label: 'IEC 61215 TC50',
+    recipe: {
+      name: 'TC 50 Cycles - IEC 61215 (Screening)', type: 'TC', standard: 'IEC 61215:2021',
+      params: { tempMin: -40, tempMax: 85, cycles: 50, rampRate: 1.67, dwellTime: 15 },
+      ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
+    },
+  },
+  {
+    label: 'IEC 61215 HF10',
+    recipe: {
+      name: 'HF 10 Cycles - IEC 61215', type: 'HF', standard: 'IEC 61215:2021',
+      params: { tempMin: -40, tempMax: 85, cycles: 10, humidity: 85, dwellTime: 1200 },
+      ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
+    },
+  },
+  {
+    label: 'PVEL LETID',
+    recipe: {
+      name: 'LETID Sensitivity - PVEL', type: 'LETID', standard: 'PVEL LETID Protocol',
+      params: { irradiance: 1000, cellTemp: 75, currentFraction: 1.0, duration: 162 },
+      ps: 'LETID_PRECISION', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
+    },
+  },
+  {
+    label: 'IEC TS 62804-1:2025 PID',
+    recipe: {
+      name: 'PID Condition A - IEC 62804', type: 'PID', standard: 'IEC TS 62804-1:2025',
+      params: { voltageStress: -1000, humidity: 85, temperature: 85, duration: 96 },
+      ps: 'PID_HIGH_VOLTAGE', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
+    },
+  },
+  {
+    label: 'Customer TC Extended',
+    recipe: {
+      name: 'TC 600 Cycles - Extended (Customer)', type: 'TC', standard: 'Customer-Specific',
+      params: { tempMin: -40, tempMax: 85, cycles: 600, rampRate: 2.0, dwellTime: 10 },
+      ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
+    },
+  },
+];
+
 const INITIAL_RECIPES: Recipe[] = [
-  {
-    id: 'r1', name: 'TC 200 Cycles - IEC 61215', type: 'TC', standard: 'IEC 61215:2021',
-    params: { tempMin: -40, tempMax: 85, cycles: 200, rampRate: 1.67, dwellTime: 15 },
-    ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
-  },
-  {
-    id: 'r2', name: 'TC 400 Extended', type: 'TC', standard: 'IEC 61215:2021',
-    params: { tempMin: -40, tempMax: 85, cycles: 400, rampRate: 1.67, dwellTime: 15 },
-    ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
-  },
-  {
-    id: 'r3', name: 'HF 10 Cycles - IEC 61215', type: 'HF', standard: 'IEC 61215:2021',
-    params: { tempMin: -40, tempMax: 85, cycles: 10, humidity: 85, dwellTime: 1200 },
-    ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
-  },
-  {
-    id: 'r4', name: 'LETID Sensitivity - PVEL', type: 'LETID', standard: 'PVEL LETID Protocol',
-    params: { irradiance: 1000, cellTemp: 75, currentFraction: 0.5, duration: 162 },
-    ps: 'LETID_PRECISION', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
-  },
-  {
-    id: 'r5', name: 'LETID IEC 61215 MQT19', type: 'LETID', standard: 'IEC 61215:2021',
-    params: { irradiance: 1000, cellTemp: 75, currentFraction: 0.075, duration: 162 },
-    ps: 'LETID_PRECISION', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { moduleType: 'bifacial', currentMode: 'isc-based', fixedCurrent: 0 },
-  },
-  {
-    id: 'r6', name: 'PID Condition A - IEC 62804', type: 'PID', standard: 'IEC TS 62804-1:2025',
-    params: { voltageStress: -1000, humidity: 85, temperature: 85, duration: 96 },
-    ps: 'PID_HIGH_VOLTAGE', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
-  },
-  {
-    id: 'r7', name: 'PID Condition B +4000V', type: 'PID', standard: 'IEC TS 62804-1:2025',
-    params: { voltageStress: 4000, humidity: 85, temperature: 85, duration: 96 },
-    ps: 'PID_HIGH_VOLTAGE', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS },
-  },
+  { id: 'r1', ...RECIPE_TEMPLATES[0].recipe },
+  { id: 'r2', name: 'TC 400 Extended', type: 'TC', standard: 'IEC 61215:2021', params: { tempMin: -40, tempMax: 85, cycles: 400, rampRate: 1.67, dwellTime: 15 }, ps: 'TC_HF_BIDIRECTIONAL', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS } },
+  { id: 'r3', ...RECIPE_TEMPLATES[2].recipe },
+  { id: 'r4', ...RECIPE_TEMPLATES[3].recipe },
+  { id: 'r5', name: 'LETID IEC 61215 MQT19', type: 'LETID', standard: 'IEC 61215:2021', params: { irradiance: 1000, cellTemp: 75, currentFraction: 0.075, duration: 162 }, ps: 'LETID_PRECISION', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { moduleType: 'bifacial', currentMode: 'isc-based', fixedCurrent: 0 } },
+  { id: 'r6', ...RECIPE_TEMPLATES[4].recipe },
+  { id: 'r7', name: 'PID Condition B +4000V', type: 'PID', standard: 'IEC TS 62804-1:2025', params: { voltageStress: 4000, humidity: 85, temperature: 85, duration: 96 }, ps: 'PID_HIGH_VOLTAGE', calibration: { ...DEFAULT_CALIBRATION }, moduleSettings: { ...DEFAULT_MODULE_SETTINGS } },
 ];
 
 const TYPE_COLORS: Record<string, string> = {
@@ -86,6 +111,58 @@ const PARAM_LABELS: Record<string, string> = {
   voltageStress: 'Voltage Stress (V)', temperature: 'Temperature (\u00B0C)',
 };
 
+// Simple timeline bar component
+function TimelineBar({ recipe }: { recipe: Recipe }) {
+  const { type, params } = recipe;
+  if (type === 'TC' || type === 'HF') {
+    const ramp = params.rampRate || 1.67;
+    const dwell = params.dwellTime || 15;
+    const deltaT = (params.tempMax || 85) - (params.tempMin || -40);
+    const rampTimeMin = deltaT / ramp;
+    const cycleTime = rampTimeMin * 2 + dwell * 2;
+    const totalHr = (cycleTime * (params.cycles || 200)) / 60;
+    const rampPct = (rampTimeMin / cycleTime) * 100;
+    const dwellPct = (dwell / cycleTime) * 100;
+
+    return (
+      <div className="mt-2">
+        <p className="text-xs text-gray-500 mb-1">Cycle Profile ({cycleTime.toFixed(0)} min/cycle, {totalHr.toFixed(0)} hr total)</p>
+        <div className="flex h-4 rounded overflow-hidden text-[8px]">
+          <div className="bg-red-600 flex items-center justify-center text-white" style={{ width: `${rampPct}%` }}>Ramp{'\u2191'}</div>
+          <div className="bg-orange-500 flex items-center justify-center text-white" style={{ width: `${dwellPct}%` }}>Hot</div>
+          <div className="bg-blue-600 flex items-center justify-center text-white" style={{ width: `${rampPct}%` }}>Ramp{'\u2193'}</div>
+          <div className="bg-cyan-500 flex items-center justify-center text-white" style={{ width: `${dwellPct}%` }}>Cold</div>
+        </div>
+      </div>
+    );
+  }
+  if (type === 'LETID') {
+    return (
+      <div className="mt-2">
+        <p className="text-xs text-gray-500 mb-1">LETID Profile ({params.duration || 162} hr)</p>
+        <div className="flex h-4 rounded overflow-hidden text-[8px]">
+          <div className="bg-yellow-600 flex items-center justify-center text-white" style={{ width: '5%' }}>Ramp</div>
+          <div className="bg-yellow-500 flex items-center justify-center text-white" style={{ width: '90%' }}>Current Injection @ {params.cellTemp || 75}{'\u00B0'}C</div>
+          <div className="bg-gray-600 flex items-center justify-center text-white" style={{ width: '5%' }}>Cool</div>
+        </div>
+      </div>
+    );
+  }
+  if (type === 'PID') {
+    return (
+      <div className="mt-2">
+        <p className="text-xs text-gray-500 mb-1">PID Profile ({params.duration || 96} hr)</p>
+        <div className="flex h-4 rounded overflow-hidden text-[8px]">
+          <div className="bg-red-700 flex items-center justify-center text-white" style={{ width: '5%' }}>Ramp</div>
+          <div className="bg-red-500 flex items-center justify-center text-white" style={{ width: '90%' }}>HV Stress {params.voltageStress || 0}V</div>
+          <div className="bg-gray-600 flex items-center justify-center text-white" style={{ width: '5%' }}>Cool</div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function RecipeManager() {
   const { toast } = useToast();
   const [recipes, setRecipes] = useState<Recipe[]>(INITIAL_RECIPES);
@@ -93,7 +170,26 @@ export default function RecipeManager() {
   const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
   const [showCalibration, setShowCalibration] = useState(false);
   const [rampInput, setRampInput] = useState('');
+  const [selectedModule, setSelectedModule] = useState<PVModule | null>(null);
+  const [showModuleSelector, setShowModuleSelector] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [cycleProgress, setCycleProgress] = useState<Record<string, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // When module selected, auto-fill injection current for LETID recipes
+  const applyModuleToRecipes = (mod: PVModule) => {
+    setSelectedModule(mod);
+    setRecipes(prev => prev.map(r => {
+      if (r.type === 'LETID' && r.moduleSettings.currentMode === 'isc-based') {
+        return { ...r, params: { ...r.params, currentFraction: 1.0 }, moduleSettings: { ...r.moduleSettings, fixedCurrent: mod.Isc } };
+      }
+      if (r.type === 'PID') {
+        return { ...r, params: { ...r.params, voltageStress: mod.testLimits.pid.Vbias } };
+      }
+      return r;
+    }));
+    toast('success', `Module applied: ${mod.manufacturer} ${mod.model} (Isc=${mod.Isc}A)`);
+  };
 
   const handleEdit = (recipe: Recipe) => {
     setEditingId(recipe.id);
@@ -147,6 +243,19 @@ export default function RecipeManager() {
     toast('info', 'New recipe created - edit parameters below');
   };
 
+  const handleAddTemplate = (tmpl: typeof RECIPE_TEMPLATES[0]) => {
+    const newRecipe: Recipe = {
+      id: `r${Date.now()}`,
+      ...tmpl.recipe,
+      params: { ...tmpl.recipe.params },
+      calibration: { ...tmpl.recipe.calibration },
+      moduleSettings: { ...tmpl.recipe.moduleSettings },
+    };
+    setRecipes(prev => [...prev, newRecipe]);
+    toast('success', `Template added: ${tmpl.label}`);
+    setShowTemplates(false);
+  };
+
   const handleExportJSON = () => {
     const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -156,6 +265,23 @@ export default function RecipeManager() {
     a.click();
     URL.revokeObjectURL(url);
     toast('success', 'Recipes exported as JSON');
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Name', 'Type', 'Standard', 'Parameters'];
+    const rows = recipes.map(r => [
+      r.name, r.type, r.standard,
+      Object.entries(r.params).map(([k, v]) => `${k}=${v}`).join('; '),
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pv-test-recipes.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('success', 'Recipes exported as CSV');
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,9 +311,25 @@ export default function RecipeManager() {
       toast('error', 'Enter a valid ramp rate in \u00B0C/min');
       return;
     }
-    const deltaT = 125; // -40 to 85
+    const deltaT = 125;
     const timeMin = deltaT / rate;
     toast('info', `Ramp time for ${deltaT}\u00B0C at ${rate}\u00B0C/min = ${timeMin.toFixed(1)} min (${(timeMin / 60).toFixed(2)} hr)`);
+  };
+
+  const simulateProgress = (recipeId: string) => {
+    const recipe = recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+    const totalCycles = recipe.params.cycles || recipe.params.duration || 100;
+    let current = cycleProgress[recipeId] || 0;
+    if (current >= totalCycles) {
+      setCycleProgress(prev => ({ ...prev, [recipeId]: 0 }));
+      return;
+    }
+    const interval = setInterval(() => {
+      current += 1;
+      setCycleProgress(prev => ({ ...prev, [recipeId]: current }));
+      if (current >= totalCycles) clearInterval(interval);
+    }, 200);
   };
 
   return (
@@ -195,22 +337,77 @@ export default function RecipeManager() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold mb-1">Test Recipe Manager</h2>
-          <p className="text-gray-400 text-sm">Full CRUD - TC / HF / LETID / PID recipes</p>
+          <p className="text-gray-400 text-sm">Full CRUD - TC / HF / LETID / PID recipes with module-specific injection</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button size="sm" onClick={handleCreate}>+ New Recipe</Button>
+          <Button size="sm" variant="outline" onClick={() => setShowTemplates(!showTemplates)}>Templates</Button>
           <Button size="sm" variant="outline" onClick={handleExportJSON}>Export JSON</Button>
-          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>Import JSON</Button>
+          <Button size="sm" variant="outline" onClick={handleExportCSV}>Export CSV</Button>
+          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>Import</Button>
           <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
         </div>
       </div>
+
+      {/* Module Selector for Recipes */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Module-Specific Current Injection</CardTitle>
+            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setShowModuleSelector(!showModuleSelector)}>
+              {selectedModule ? `${selectedModule.manufacturer} ${selectedModule.model}` : 'Select Module'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showModuleSelector && (
+          <CardContent>
+            <ModuleSelector selectedModule={selectedModule} onSelectModule={(mod) => { if (mod) applyModuleToRecipes(mod); else setSelectedModule(null); }} />
+          </CardContent>
+        )}
+        {selectedModule && !showModuleSelector && (
+          <CardContent>
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              <Badge variant="default" className="text-xs">{selectedModule.technology}</Badge>
+              <span>Isc = {selectedModule.Isc}A (PVEL: 1xIsc injection)</span>
+              <span>|</span>
+              <span>PID Vbias = {'\u00B1'}{selectedModule.testLimits.pid.Vbias}V</span>
+              <span>|</span>
+              <span>Voc = {selectedModule.Voc}V</span>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Template Selector */}
+      {showTemplates && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Per-Standard Recipe Templates</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {RECIPE_TEMPLATES.map((tmpl, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleAddTemplate(tmpl)}
+                  className="p-3 border border-gray-700 rounded-lg text-left hover:border-blue-500 hover:bg-blue-900/10 transition-colors"
+                >
+                  <p className="text-sm font-medium text-blue-300">{tmpl.label}</p>
+                  <p className="text-xs text-gray-500 mt-1">{tmpl.recipe.standard}</p>
+                  <Badge variant="outline" className="text-xs mt-1">{tmpl.recipe.type}</Badge>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Ramp Rate Calculator */}
       <Card>
         <CardContent className="pt-4">
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Ramp Rate Calculator (\u00B0C/min)</label>
+              <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Ramp Rate Calculator ({'\u00B0'}C/min)</label>
               <Input type="number" placeholder="e.g. 1.67" value={rampInput} onChange={(e) => setRampInput(e.target.value)} />
             </div>
             <Button size="sm" onClick={calculateRampTime}>Calculate Time</Button>
@@ -222,6 +419,9 @@ export default function RecipeManager() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {recipes.map((recipe) => {
           const isEditing = editingId === recipe.id && editRecipe;
+          const progress = cycleProgress[recipe.id] || 0;
+          const totalForProgress = recipe.params.cycles || recipe.params.duration || 100;
+          const progressPct = Math.min(100, (progress / totalForProgress) * 100);
 
           return (
             <Card key={recipe.id} className={`transition-colors ${isEditing ? 'border-blue-500' : 'hover:border-blue-700'}`}>
@@ -272,6 +472,29 @@ export default function RecipeManager() {
                   ))}
                 </div>
 
+                {/* Module-specific injection info */}
+                {selectedModule && recipe.type === 'LETID' && (
+                  <div className="p-2 bg-yellow-900/20 border border-yellow-800 rounded text-xs text-yellow-400">
+                    Iinject = {recipe.params.currentFraction || 1}x Isc = {((recipe.params.currentFraction || 1) * selectedModule.Isc).toFixed(2)}A (PVEL Protocol)
+                  </div>
+                )}
+
+                {/* Timeline visualization */}
+                {!isEditing && <TimelineBar recipe={recipe} />}
+
+                {/* Cycle Progress Bar */}
+                {progress > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Progress</span>
+                      <span className="text-gray-300 font-mono">{progress}/{totalForProgress} {recipe.type === 'TC' || recipe.type === 'HF' ? 'cycles' : 'hr'}</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${progressPct >= 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${progressPct}%` }} />
+                    </div>
+                  </div>
+                )}
+
                 {/* Module Settings */}
                 {isEditing && (
                   <div className="border-t border-gray-700 pt-2 space-y-2">
@@ -302,7 +525,7 @@ export default function RecipeManager() {
                 )}
 
                 {/* Buttons */}
-                <div className="flex gap-2 pt-1">
+                <div className="flex gap-2 pt-1 flex-wrap">
                   {isEditing ? (
                     <>
                       <Button size="sm" onClick={handleSave}>Save</Button>
@@ -315,6 +538,9 @@ export default function RecipeManager() {
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleEdit(recipe)}>Edit</Button>
                       <Button size="sm" variant="outline" onClick={() => handleClone(recipe)}>Clone</Button>
+                      <Button size="sm" variant="outline" onClick={() => simulateProgress(recipe.id)}>
+                        {progress > 0 && progress < totalForProgress ? 'Running...' : progress >= totalForProgress ? 'Reset' : 'Simulate'}
+                      </Button>
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(recipe.id)}>Delete</Button>
                     </>
                   )}
