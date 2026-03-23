@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/Toast';
 
 interface UnitSpec {
   slot: number;
@@ -36,15 +38,34 @@ const TYPE_COLORS: Record<string, { fill: string; stroke: string; text: string }
   'Empty': { fill: '#1a1a2e', stroke: '#374151', text: 'text-gray-500' },
 };
 
+// Cable routing data for rear view
+const CABLE_ROUTES = [
+  { from: 1, to: 3, label: 'Modbus RS485', color: '#a855f7' },
+  { from: 1, to: 8, label: 'Modbus RS485', color: '#a855f7' },
+  { from: 1, to: 10, label: 'Modbus RS485', color: '#a855f7' },
+  { from: 2, to: 3, label: 'Sense Lines', color: '#22c55e' },
+  { from: 2, to: 8, label: 'Sense Lines', color: '#22c55e' },
+  { from: 2, to: 10, label: 'Sense Lines', color: '#22c55e' },
+];
+
 export default function DesignDrawing() {
+  const { toast } = useToast();
   const [rackCount, setRackCount] = useState(1);
   const [selectedUnit, setSelectedUnit] = useState<UnitSpec | null>(null);
-  const [view, setView] = useState<'front' | 'rear'>('front');
+  const [view, setView] = useState<'front' | 'rear' | 'cable'>('front');
 
   const totalUnits = rackCount * 10;
   const tcCount = rackCount * 5;
   const letidCount = rackCount * 2;
   const pidCount = rackCount * 1;
+
+  const handleExportPDF = () => {
+    toast('info', 'PDF export: Rack drawing will be generated via FreeCAD Python scripts (see /cad folder)');
+  };
+
+  const handleExportDXF = () => {
+    toast('info', 'DXF export: CAD drawing will be generated via FreeCAD Python scripts (see /cad folder)');
+  };
 
   return (
     <div className="space-y-6">
@@ -67,14 +88,16 @@ export default function DesignDrawing() {
             </select>
           </div>
           <div className="flex gap-1">
-            <button
-              onClick={() => setView('front')}
-              className={`px-3 py-1 rounded text-xs font-medium ${view === 'front' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}
-            >Front</button>
-            <button
-              onClick={() => setView('rear')}
-              className={`px-3 py-1 rounded text-xs font-medium ${view === 'rear' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}
-            >Rear</button>
+            {(['front', 'rear', 'cable'] as const).map(v => (
+              <button key={v}
+                onClick={() => setView(v)}
+                className={`px-3 py-1 rounded text-xs font-medium ${view === v ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+              >{v === 'cable' ? 'Cable Routing' : v.charAt(0).toUpperCase() + v.slice(1)}</button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={handleExportPDF}>Export PDF</Button>
+            <Button size="sm" variant="outline" onClick={handleExportDXF}>Export DXF</Button>
           </div>
         </div>
       </div>
@@ -118,88 +141,132 @@ export default function DesignDrawing() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">{view === 'front' ? 'Front View' : 'Rear View'} - Rack 1 of {rackCount}</CardTitle>
+              <CardTitle className="text-sm">
+                {view === 'front' ? 'Front View' : view === 'rear' ? 'Rear View' : 'Cable Routing Diagram'} - Rack 1 of {rackCount}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <svg viewBox="0 0 500 700" className="w-full max-w-lg mx-auto" xmlns="http://www.w3.org/2000/svg">
-                {/* Rack Frame */}
-                <rect x="30" y="10" width="440" height="680" rx="4" fill="#0a0a1a" stroke="#374151" strokeWidth="2" />
-                {/* Rack Rails */}
-                <rect x="30" y="10" width="15" height="680" fill="#1f2937" stroke="#374151" strokeWidth="1" />
-                <rect x="455" y="10" width="15" height="680" fill="#1f2937" stroke="#374151" strokeWidth="1" />
-
-                {/* Dimensions */}
-                <text x="250" y="705" textAnchor="middle" fill="#6b7280" fontSize="10">19&quot; (482.6mm) | 42U Rack</text>
-                <line x1="20" y1="10" x2="20" y2="690" stroke="#4b5563" strokeWidth="1" strokeDasharray="4" />
-                <text x="15" y="350" textAnchor="middle" fill="#6b7280" fontSize="9" transform="rotate(-90, 15, 350)">1866mm (42U)</text>
-
-                {/* Units */}
-                {RACK_UNITS.map((unit, i) => {
-                  const y = 20 + i * 65;
-                  const colors = TYPE_COLORS[unit.type];
-                  const isSelected = selectedUnit?.slot === unit.slot;
-
-                  if (view === 'front') {
+              {view === 'cable' ? (
+                /* Cable Routing Diagram */
+                <svg viewBox="0 0 500 700" className="w-full max-w-lg mx-auto" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="30" y="10" width="440" height="680" rx="4" fill="#0a0a1a" stroke="#374151" strokeWidth="2" />
+                  {/* Simplified slot labels */}
+                  {RACK_UNITS.map((unit, i) => {
+                    const y = 20 + i * 65;
+                    const colors = TYPE_COLORS[unit.type];
                     return (
-                      <g key={unit.slot} onClick={() => setSelectedUnit(unit)} className="cursor-pointer">
-                        <rect x="50" y={y} width="400" height="58" rx="3"
-                          fill={colors.fill} stroke={isSelected ? '#ffffff' : colors.stroke}
-                          strokeWidth={isSelected ? 2.5 : 1.5}
-                          opacity={isSelected ? 1 : 0.85}
-                        />
-                        {/* U marker */}
-                        <text x="38" y={y + 34} textAnchor="middle" fill="#6b7280" fontSize="8">U{unit.slot}</text>
-                        {/* Unit label */}
-                        <text x="65" y={y + 22} fill="#e5e7eb" fontSize="11" fontWeight="600">{unit.label}</text>
-                        <text x="65" y={y + 38} fill="#9ca3af" fontSize="9">{unit.model}</text>
-                        {/* Front panel indicators */}
-                        <circle cx="420" cy={y + 20} r="5" fill="#22c55e" opacity="0.8" />
-                        <circle cx="420" cy={y + 38} r="5" fill="#3b82f6" opacity="0.6" />
-                        {/* LCD display area */}
-                        <rect x="300" y={y + 8} width="90" height="42" rx="2" fill="#0d1117" stroke="#374151" strokeWidth="0.5" />
-                        <text x="345" y={y + 26} textAnchor="middle" fill={colors.stroke} fontSize="10" fontFamily="monospace">{unit.voltage}</text>
-                        <text x="345" y={y + 42} textAnchor="middle" fill={colors.stroke} fontSize="9" fontFamily="monospace">{unit.current}</text>
-                        {/* Ventilation slots */}
-                        {[0, 1, 2, 3].map((j) => (
-                          <rect key={j} x={140 + j * 22} y={y + 10} width="15" height="3" rx="1" fill="#1f2937" />
-                        ))}
+                      <g key={unit.slot}>
+                        <rect x="50" y={y} width="160" height="58" rx="3" fill={colors.fill} stroke={colors.stroke} strokeWidth="1" opacity="0.7" />
+                        <text x="60" y={y + 22} fill="#e5e7eb" fontSize="9" fontWeight="600">{unit.label}</text>
+                        <text x="60" y={y + 38} fill="#9ca3af" fontSize="7">U{unit.slot}</text>
                       </g>
                     );
-                  } else {
+                  })}
+                  {/* Cable routing lines */}
+                  {CABLE_ROUTES.map((route, i) => {
+                    const y1 = 20 + (route.from - 1) * 65 + 29;
+                    const y2 = 20 + (route.to - 1) * 65 + 29;
+                    const xMid = 260 + i * 25;
                     return (
-                      <g key={unit.slot} onClick={() => setSelectedUnit(unit)} className="cursor-pointer">
-                        <rect x="50" y={y} width="400" height="58" rx="3"
-                          fill={colors.fill} stroke={isSelected ? '#ffffff' : colors.stroke}
-                          strokeWidth={isSelected ? 2.5 : 1.5}
-                          opacity={isSelected ? 1 : 0.85}
-                        />
-                        <text x="38" y={y + 34} textAnchor="middle" fill="#6b7280" fontSize="8">U{unit.slot}</text>
-                        <text x="65" y={y + 22} fill="#e5e7eb" fontSize="11" fontWeight="600">{unit.label} (Rear)</text>
-                        {/* Cable connectors */}
-                        <rect x="300" y={y + 5} width="20" height="20" rx="2" fill="#1a1a2e" stroke="#4b5563" strokeWidth="1" />
-                        <text x="310" y={y + 19} textAnchor="middle" fill="#6b7280" fontSize="7">OUT</text>
-                        <rect x="330" y={y + 5} width="20" height="20" rx="2" fill="#1a1a2e" stroke="#4b5563" strokeWidth="1" />
-                        <text x="340" y={y + 19} textAnchor="middle" fill="#6b7280" fontSize="7">RS485</text>
-                        <rect x="360" y={y + 5} width="20" height="20" rx="2" fill="#1a1a2e" stroke="#4b5563" strokeWidth="1" />
-                        <text x="370" y={y + 19} textAnchor="middle" fill="#6b7280" fontSize="7">ETH</text>
-                        {/* Fan grilles */}
-                        <circle cx="410" cy={y + 29} r="18" fill="none" stroke="#374151" strokeWidth="1" />
-                        {[0, 60, 120, 180, 240, 300].map((deg) => (
-                          <line key={deg} x1="410" y1={y + 29} x2={410 + 12 * Math.cos(deg * Math.PI / 180)} y2={y + 29 + 12 * Math.sin(deg * Math.PI / 180)} stroke="#374151" strokeWidth="0.8" />
-                        ))}
-                        {/* Cable routing arrows */}
-                        <line x1="80" y={y + 40} x2="280" y2={y + 40} stroke="#374151" strokeWidth="0.5" strokeDasharray="3" />
-                        <text x="65" y={y + 44} fill="#4b5563" fontSize="7">Cable routing</text>
+                      <g key={i}>
+                        <path d={`M 210 ${y1} H ${xMid} V ${y2} H 210`}
+                          fill="none" stroke={route.color} strokeWidth="1.5" strokeDasharray="4" opacity="0.7" />
+                        <text x={xMid + 3} y={(y1 + y2) / 2} fill={route.color} fontSize="6" transform={`rotate(-90, ${xMid + 3}, ${(y1 + y2) / 2})`}>
+                          {route.label}
+                        </text>
                       </g>
                     );
-                  }
-                })}
-              </svg>
+                  })}
+                  {/* Cable tray */}
+                  <rect x="240" y="10" width="3" height="680" fill="#374151" opacity="0.5" />
+                  <text x="250" y="700" fill="#6b7280" fontSize="9">Cable Tray (vertical)</text>
+                  {/* Legend */}
+                  <g transform="translate(350, 20)">
+                    <text x="0" y="0" fill="#9ca3af" fontSize="8" fontWeight="600">Cable Legend</text>
+                    <line x1="0" y1="12" x2="30" y2="12" stroke="#a855f7" strokeWidth="1.5" strokeDasharray="4" />
+                    <text x="35" y="15" fill="#a855f7" fontSize="7">Modbus RS485</text>
+                    <line x1="0" y1="27" x2="30" y2="27" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="4" />
+                    <text x="35" y="30" fill="#22c55e" fontSize="7">Sense Lines</text>
+                    <line x1="0" y1="42" x2="30" y2="42" stroke="#3b82f6" strokeWidth="1.5" />
+                    <text x="35" y="45" fill="#3b82f6" fontSize="7">Power</text>
+                    <line x1="0" y1="57" x2="30" y2="57" stroke="#ef4444" strokeWidth="1.5" />
+                    <text x="35" y="60" fill="#ef4444" fontSize="7">HV (PID)</text>
+                  </g>
+                </svg>
+              ) : (
+                /* Front/Rear views */
+                <svg viewBox="0 0 500 700" className="w-full max-w-lg mx-auto" xmlns="http://www.w3.org/2000/svg">
+                  {/* Rack Frame */}
+                  <rect x="30" y="10" width="440" height="680" rx="4" fill="#0a0a1a" stroke="#374151" strokeWidth="2" />
+                  {/* Rack Rails */}
+                  <rect x="30" y="10" width="15" height="680" fill="#1f2937" stroke="#374151" strokeWidth="1" />
+                  <rect x="455" y="10" width="15" height="680" fill="#1f2937" stroke="#374151" strokeWidth="1" />
+
+                  {/* Dimensions */}
+                  <text x="250" y="705" textAnchor="middle" fill="#6b7280" fontSize="10">19&quot; (482.6mm) | 42U Rack</text>
+                  <line x1="20" y1="10" x2="20" y2="690" stroke="#4b5563" strokeWidth="1" strokeDasharray="4" />
+                  <text x="15" y="350" textAnchor="middle" fill="#6b7280" fontSize="9" transform="rotate(-90, 15, 350)">1866mm (42U)</text>
+
+                  {/* Units */}
+                  {RACK_UNITS.map((unit, i) => {
+                    const y = 20 + i * 65;
+                    const colors = TYPE_COLORS[unit.type];
+                    const isSelected = selectedUnit?.slot === unit.slot;
+
+                    if (view === 'front') {
+                      return (
+                        <g key={unit.slot} onClick={() => setSelectedUnit(unit)} className="cursor-pointer">
+                          <rect x="50" y={y} width="400" height="58" rx="3"
+                            fill={colors.fill} stroke={isSelected ? '#ffffff' : colors.stroke}
+                            strokeWidth={isSelected ? 2.5 : 1.5}
+                            opacity={isSelected ? 1 : 0.85}
+                          />
+                          <text x="38" y={y + 34} textAnchor="middle" fill="#6b7280" fontSize="8">U{unit.slot}</text>
+                          <text x="65" y={y + 22} fill="#e5e7eb" fontSize="11" fontWeight="600">{unit.label}</text>
+                          <text x="65" y={y + 38} fill="#9ca3af" fontSize="9">{unit.model}</text>
+                          <circle cx="420" cy={y + 20} r="5" fill="#22c55e" opacity="0.8" />
+                          <circle cx="420" cy={y + 38} r="5" fill="#3b82f6" opacity="0.6" />
+                          <rect x="300" y={y + 8} width="90" height="42" rx="2" fill="#0d1117" stroke="#374151" strokeWidth="0.5" />
+                          <text x="345" y={y + 26} textAnchor="middle" fill={colors.stroke} fontSize="10" fontFamily="monospace">{unit.voltage}</text>
+                          <text x="345" y={y + 42} textAnchor="middle" fill={colors.stroke} fontSize="9" fontFamily="monospace">{unit.current}</text>
+                          {[0, 1, 2, 3].map((j) => (
+                            <rect key={j} x={140 + j * 22} y={y + 10} width="15" height="3" rx="1" fill="#1f2937" />
+                          ))}
+                        </g>
+                      );
+                    } else {
+                      return (
+                        <g key={unit.slot} onClick={() => setSelectedUnit(unit)} className="cursor-pointer">
+                          <rect x="50" y={y} width="400" height="58" rx="3"
+                            fill={colors.fill} stroke={isSelected ? '#ffffff' : colors.stroke}
+                            strokeWidth={isSelected ? 2.5 : 1.5}
+                            opacity={isSelected ? 1 : 0.85}
+                          />
+                          <text x="38" y={y + 34} textAnchor="middle" fill="#6b7280" fontSize="8">U{unit.slot}</text>
+                          <text x="65" y={y + 22} fill="#e5e7eb" fontSize="11" fontWeight="600">{unit.label} (Rear)</text>
+                          <rect x="300" y={y + 5} width="20" height="20" rx="2" fill="#1a1a2e" stroke="#4b5563" strokeWidth="1" />
+                          <text x="310" y={y + 19} textAnchor="middle" fill="#6b7280" fontSize="7">OUT</text>
+                          <rect x="330" y={y + 5} width="20" height="20" rx="2" fill="#1a1a2e" stroke="#4b5563" strokeWidth="1" />
+                          <text x="340" y={y + 19} textAnchor="middle" fill="#6b7280" fontSize="7">RS485</text>
+                          <rect x="360" y={y + 5} width="20" height="20" rx="2" fill="#1a1a2e" stroke="#4b5563" strokeWidth="1" />
+                          <text x="370" y={y + 19} textAnchor="middle" fill="#6b7280" fontSize="7">ETH</text>
+                          <circle cx="410" cy={y + 29} r="18" fill="none" stroke="#374151" strokeWidth="1" />
+                          {[0, 60, 120, 180, 240, 300].map((deg) => (
+                            <line key={deg} x1="410" y1={y + 29} x2={410 + 12 * Math.cos(deg * Math.PI / 180)} y2={y + 29 + 12 * Math.sin(deg * Math.PI / 180)} stroke="#374151" strokeWidth="0.8" />
+                          ))}
+                          <line x1="80" y={y + 40} x2="280" y2={y + 40} stroke="#374151" strokeWidth="0.5" strokeDasharray="3" />
+                          <text x="65" y={y + 44} fill="#4b5563" fontSize="7">Cable routing</text>
+                        </g>
+                      );
+                    }
+                  })}
+                </svg>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Selected Unit Detail */}
+        {/* Selected Unit Detail + Legend + Specs */}
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-2">
@@ -224,6 +291,7 @@ export default function DesignDrawing() {
                       { label: 'Communication', value: 'Modbus RTU/TCP' },
                       { label: 'Mounting', value: '19" Rack Mount' },
                       { label: 'Sensing', value: selectedUnit.type === 'LETID' ? '4-Wire Kelvin' : 'Standard' },
+                      { label: 'Safety', value: selectedUnit.type === 'PID' ? '5mA Interlock Trip' : 'Standard Protection' },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex justify-between">
                         <span className="text-gray-500">{label}</span>
