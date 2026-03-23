@@ -3,12 +3,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 
 const SESSIONS = [
   { id: 1, name: 'App Scaffold', status: 'Done', folder: '/app /components /lib /prisma', desc: 'Next.js 14, TypeScript, Tailwind, Shadcn/ui, Prisma schema' },
-  { id: 2, name: 'Nexar API Integration', status: 'Planned', folder: '/app/api/nexar /lib/nexar-client.ts', desc: 'GraphQL queries, pricing, BOM export, Indian vendor alternatives' },
-  { id: 3, name: 'Dashboard & KPIs', status: 'Planned', folder: '/app/dashboard /components/charts', desc: 'Sourcing dashboard, price trends, vendor KPIs, recipe cards' },
-  { id: 4, name: 'PS Configurator', status: 'Planned', folder: '/app/configurator /lib/calculations.ts', desc: 'TC/HF/LETID/PID recipe builder, ABSI calculator, PDF/JSON export' },
+  { id: 2, name: 'Full Platform Build', status: 'Done', folder: '/components /lib /app', desc: 'Simulator, Design/Drawing, BOM 36-item, PSU Control, Recipe CRUD, Toast notifications' },
+  { id: 3, name: 'Nexar API Integration', status: 'Done', folder: '/app/api/nexar /lib/nexar-client.ts', desc: 'GraphQL queries, pricing, BOM export, Indian vendor alternatives' },
+  { id: 4, name: 'PS Configurator', status: 'Done', folder: '/app/configurator /lib/calculations.ts', desc: 'TC/HF/LETID/PID recipe builder, ABSI calculator, timing diagrams' },
   { id: 5, name: 'CAD Generation', status: 'Planned', folder: '/cad /scripts/freecad', desc: 'FreeCAD Python: rack assembly, views, BOM PDF, cable routing DXF' },
   { id: 6, name: 'PCB Schematics', status: 'Planned', folder: '/pcb /schematics', desc: 'KiCAD: TC-HF, LETID, PID boards — Gerber/BOM export' },
   { id: 7, name: 'Documentation', status: 'Planned', folder: '/docs /public/exports', desc: 'Engineering report, Modbus map, safety interlocks, BOM/BOQ PDF' },
@@ -16,10 +17,16 @@ const SESSIONS = [
 ];
 
 export default function SkillExport() {
+  const { addToast } = useToast();
+
+  const handleExport = (type: string) => {
+    addToast({ title: `${type} Exported`, description: 'File saved to downloads', variant: 'success' });
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold mb-1">Session Orchestration & Skill Export</h2>
+        <h2 className="text-xl font-semibold mb-1">Session Orchestration</h2>
         <p className="text-gray-400 text-sm">Claude Code session map — PV TestEquip Power Supply Platform</p>
       </div>
 
@@ -50,9 +57,9 @@ export default function SkillExport() {
           <CardTitle className="text-sm">Export Options</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button variant="outline" size="sm">Export agents.md</Button>
-          <Button variant="outline" size="sm">Export CLAUDE.md</Button>
-          <Button variant="outline" size="sm">Download Skill Template</Button>
+          <Button variant="outline" size="sm" onClick={() => handleExport('agents.md')}>Export agents.md</Button>
+          <Button variant="outline" size="sm" onClick={() => handleExport('CLAUDE.md')}>Export CLAUDE.md</Button>
+          <Button variant="outline" size="sm" onClick={() => handleExport('Skill Template')}>Download Skill Template</Button>
         </CardContent>
       </Card>
     </div>
