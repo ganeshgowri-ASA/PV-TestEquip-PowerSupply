@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ModuleSelector from '@/components/ModuleSelector';
+import type { PVModule } from '@/data/moduleDatabase';
 
 const KPI_CARDS = [
   {
@@ -37,6 +40,23 @@ const MODULE_SPECS = [
 ];
 
 export default function KPIDashboard() {
+  const [selectedModule, setSelectedModule] = useState<PVModule | null>(null);
+
+  const moduleSpecs = selectedModule
+    ? [
+        { label: 'Technology', value: selectedModule.technology },
+        { label: 'Voc', value: `${selectedModule.Voc}V` },
+        { label: 'Isc', value: `${selectedModule.Isc}A` },
+        { label: 'Pmax', value: `${selectedModule.Pmax}W` },
+        { label: 'Efficiency', value: `${selectedModule.efficiency}%` },
+        { label: 'Standard', value: 'IEC 61215:2021' },
+      ]
+    : MODULE_SPECS;
+
+  const moduleTitle = selectedModule
+    ? `Target Module — ${selectedModule.manufacturer} ${selectedModule.model}`
+    : 'Target Module — HJT Bifacial';
+
   return (
     <div className="space-y-6">
       <div>
@@ -69,14 +89,17 @@ export default function KPIDashboard() {
         ))}
       </div>
 
+      {/* Module Selector */}
+      <ModuleSelector onSelect={setSelectedModule} selected={selectedModule} />
+
       {/* Module Specs */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Target Module — HJT Bifacial</CardTitle>
+          <CardTitle className="text-base">{moduleTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {MODULE_SPECS.map(({ label, value }) => (
+            {moduleSpecs.map(({ label, value }) => (
               <div key={label} className="text-center">
                 <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
                 <p className="text-lg font-semibold text-blue-300 mt-1">{value}</p>
