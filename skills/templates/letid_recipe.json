@@ -1,0 +1,121 @@
+{
+  "$schema": "pv-test-recipe-v1",
+  "recipe_type": "letid",
+  "name": "LETID Sensitivity Test Recipe",
+  "standard": "IEC 61215:2021 (MQT 19) + PVEL LETID Sensitivity Test Protocol",
+  "company": "Antaryami Solar Analytics",
+  "version": "1.0.0",
+
+  "test_conditions": {
+    "temperature": {
+      "setpoint_C": 75,
+      "tolerance_C": 2,
+      "source": "chamber or hotplate",
+      "stabilization_time_min": 30,
+      "note": "Module cell temperature measured via rear-surface thermocouple"
+    },
+    "illumination": {
+      "required": false,
+      "note": "Current injection replaces illumination per IEC 61215 MQT 19 option B"
+    },
+    "duration": {
+      "total_hours": 162,
+      "measurement_intervals_hours": [0, 6, 12, 24, 48, 72, 96, 120, 144, 162],
+      "note": "Flash test at each interval to track Pmax evolution"
+    }
+  },
+
+  "current_injection": {
+    "method": "constant_current_forward_bias",
+    "current_value_A": 2.0,
+    "current_calculation": "Isc × 0.075 (7.5% of short-circuit current)",
+    "isc_reference_A": 27.0,
+    "actual_injection_A": 2.025,
+    "rounded_to_A": 2.0,
+    "tolerance": "±0.1%",
+    "polarity": "forward_bias",
+    "start_condition": "cell_temp stable at 75°C ± 2°C for 30 min",
+    "stop_condition": "162 hours elapsed or degradation plateau reached"
+  },
+
+  "pvel_extended_protocol": {
+    "enabled": true,
+    "description": "PVEL's enhanced LETID test with higher injection and longer duration",
+    "current_multiplier": 1.0,
+    "extended_duration_hours": 300,
+    "additional_intervals_hours": [192, 216, 240, 264, 288, 300],
+    "recovery_tracking": true,
+    "recovery_note": "Continue past nadir to observe recovery behavior"
+  },
+
+  "power_supply_requirements": {
+    "voltage_range_V": [0, 72],
+    "current_range_A": [0, 2.5],
+    "power_per_channel_W": 180,
+    "channels": 10,
+    "total_power_kW": 1.8,
+    "bidirectional": false,
+    "topology": "linear_switching_hybrid",
+    "noise_specification": {
+      "voltage_ripple_mVpp": 10,
+      "current_ripple_mApp": 1,
+      "note": "Low noise critical for precision current injection"
+    },
+    "dac_resolution_bits": 16,
+    "adc_resolution_bits": 18,
+    "voltage_sensing": "4-wire Kelvin",
+    "regulation_accuracy": "±0.1%",
+    "communication": ["Modbus RTU", "Modbus TCP"],
+    "safety": {
+      "ovp_threshold_V": 72,
+      "ocp_threshold_A": 3.0,
+      "otp_threshold_C": 85,
+      "emergency_stop": true
+    }
+  },
+
+  "measurement_requirements": {
+    "voltage_accuracy": "±0.05%",
+    "current_accuracy": "±0.1%",
+    "temperature_sensors": [
+      "cell_rear_surface",
+      "ambient",
+      "chamber_or_hotplate"
+    ],
+    "sampling_rate_hz": 1,
+    "data_format": ["csv", "json"],
+    "log_fields": [
+      "timestamp",
+      "channel_id",
+      "voltage_V",
+      "current_A",
+      "power_W",
+      "cell_temp_C",
+      "ambient_temp_C",
+      "elapsed_hours",
+      "injection_status"
+    ]
+  },
+
+  "flash_test_protocol": {
+    "at_each_interval": true,
+    "conditions": "STC (1000 W/m², 25°C, AM1.5G)",
+    "parameters_measured": ["Pmax", "Isc", "Voc", "FF", "Impp", "Vmpp"],
+    "cool_down_before_flash_min": 60,
+    "cool_down_target_C": 25,
+    "cool_down_tolerance_C": 2,
+    "repeat_measurements": 3,
+    "note": "Average of 3 measurements at each interval"
+  },
+
+  "pass_fail_criteria": {
+    "max_pmax_degradation_percent": 5,
+    "letid_susceptibility_categories": {
+      "A": { "degradation_percent": "<2", "label": "Low susceptibility" },
+      "B": { "degradation_percent": "2-5", "label": "Moderate susceptibility" },
+      "C": { "degradation_percent": ">5", "label": "High susceptibility" }
+    },
+    "recovery_required": false,
+    "recovery_note": "Recovery >50% of degradation is a positive indicator"
+  }
+}

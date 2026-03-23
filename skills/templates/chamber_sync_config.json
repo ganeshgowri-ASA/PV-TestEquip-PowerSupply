@@ -1,0 +1,243 @@
+{
+  "$schema": "pv-chamber-sync-v1",
+  "version": "1.0.0",
+  "company": "Antaryami Solar Analytics",
+  "description": "Configuration for synchronizing test chambers with power supplies and data loggers",
+
+  "communication_bus": {
+    "primary": {
+      "protocol": "Modbus TCP",
+      "port": 502,
+      "timeout_ms": 1000,
+      "retry_count": 3,
+      "polling_interval_ms": 1000
+    },
+    "secondary": {
+      "protocol": "Modbus RTU",
+      "baud_rate": 9600,
+      "data_bits": 8,
+      "parity": "none",
+      "stop_bits": 1,
+      "rs485_port": "/dev/ttyUSB0"
+    }
+  },
+
+  "devices": {
+    "chamber": {
+      "device_id": 1,
+      "name": "Climate Chamber",
+      "manufacturer": "",
+      "model": "",
+      "registers": {
+        "read": {
+          "chamber_temp_actual": { "address": 100, "type": "float32", "unit": "°C" },
+          "chamber_rh_actual": { "address": 102, "type": "float32", "unit": "%RH" },
+          "chamber_status": { "address": 104, "type": "uint16", "values": { "0": "idle", "1": "running", "2": "hold", "3": "fault" } },
+          "current_step": { "address": 105, "type": "uint16" },
+          "cycle_count": { "address": 106, "type": "uint16" },
+          "time_remaining_s": { "address": 108, "type": "uint32" },
+          "door_status": { "address": 110, "type": "uint16", "values": { "0": "closed", "1": "open" } },
+          "alarm_code": { "address": 111, "type": "uint16" }
+        },
+        "write": {
+          "chamber_temp_setpoint": { "address": 200, "type": "float32", "unit": "°C" },
+          "chamber_rh_setpoint": { "address": 202, "type": "float32", "unit": "%RH" },
+          "command": { "address": 204, "type": "uint16", "values": { "0": "stop", "1": "start", "2": "hold", "3": "resume" } },
+          "recipe_select": { "address": 205, "type": "uint16" }
+        }
+      }
+    },
+
+    "power_supply": {
+      "device_id": 2,
+      "name": "Test Power Supply",
+      "channels": 10,
+      "registers_per_channel": 20,
+      "base_address_ch1": 300,
+      "registers": {
+        "read_per_channel": {
+          "voltage_actual_V": { "offset": 0, "type": "float32" },
+          "current_actual_A": { "offset": 2, "type": "float32" },
+          "power_actual_W": { "offset": 4, "type": "float32" },
+          "module_temp_C": { "offset": 6, "type": "float32" },
+          "channel_status": { "offset": 8, "type": "uint16", "values": { "0": "off", "1": "on", "2": "fault", "3": "standby" } },
+          "fault_code": { "offset": 9, "type": "uint16" }
+        },
+        "write_per_channel": {
+          "voltage_setpoint_V": { "offset": 10, "type": "float32" },
+          "current_setpoint_A": { "offset": 12, "type": "float32" },
+          "output_enable": { "offset": 14, "type": "uint16", "values": { "0": "disable", "1": "enable" } },
+          "mode_select": { "offset": 15, "type": "uint16", "values": { "0": "CV", "1": "CC", "2": "CP" } }
+        },
+        "global": {
+          "read": {
+            "system_status": { "address": 500, "type": "uint16" },
+            "dc_bus_voltage_V": { "address": 502, "type": "float32" },
+            "total_power_W": { "address": 504, "type": "float32" },
+            "heatsink_temp_C": { "address": 506, "type": "float32" },
+            "fan_speed_rpm": { "address": 508, "type": "uint16" }
+          },
+          "write": {
+            "global_enable": { "address": 510, "type": "uint16" },
+            "emergency_stop": { "address": 511, "type": "uint16" },
+            "fault_reset": { "address": 512, "type": "uint16" }
+          }
+        }
+      }
+    },
+
+    "data_logger": {
+      "device_id": 3,
+      "name": "Data Acquisition System",
+      "registers": {
+        "read": {
+          "logger_status": { "address": 600, "type": "uint16" },
+          "record_count": { "address": 602, "type": "uint32" },
+          "disk_space_mb": { "address": 604, "type": "uint32" }
+        },
+        "write": {
+          "log_command": { "address": 610, "type": "uint16", "values": { "0": "stop", "1": "start", "2": "mark_event" } },
+          "log_interval_ms": { "address": 611, "type": "uint16" },
+          "event_marker": { "address": 612, "type": "uint16" }
+        }
+      }
+    }
+  },
+
+  "sync_profiles": {
+    "tc_hf": {
+      "name": "Thermal Cycling with Current Injection",
+      "description": "Synchronize chamber temperature profile with power supply current injection",
+      "triggers": [
+        {
+          "name": "start_injection",
+          "condition": "chamber.chamber_temp_actual >= 25.0 AND chamber.chamber_status == 'running' AND current_phase == 'ramp_up'",
+          "action": "power_supply.output_enable = 1 (all channels)",
+          "log_event": "INJECTION_START"
+        },
+        {
+          "name": "stop_injection",
+          "condition": "chamber.chamber_temp_actual < 25.0 AND current_phase == 'ramp_down'",
+          "action": "power_supply.output_enable = 0 (all channels)",
+          "log_event": "INJECTION_STOP"
+        },
+        {
+          "name": "cycle_complete",
+          "condition": "chamber.cycle_count incremented",
+          "action": "data_logger.event_marker = cycle_count",
+          "log_event": "CYCLE_COMPLETE"
+        },
+        {
+          "name": "fault_any",
+          "condition": "chamber.alarm_code != 0 OR power_supply.fault_code != 0",
+          "action": "power_supply.emergency_stop = 1, data_logger.log_command = 'mark_event'",
+          "log_event": "FAULT_DETECTED"
+        }
+      ],
+      "temperature_stability_check": {
+        "window_C": 2.0,
+        "duration_s": 60,
+        "note": "Module temp must be stable within ±2°C for 60s before injection starts"
+      }
+    },
+
+    "letid": {
+      "name": "LETID Constant Temperature Current Injection",
+      "description": "Maintain 75°C and inject constant current for 162+ hours",
+      "triggers": [
+        {
+          "name": "start_injection",
+          "condition": "chamber.chamber_temp_actual >= 73.0 AND chamber.chamber_temp_actual <= 77.0 AND stability_check_passed",
+          "action": "power_supply.output_enable = 1 (all channels), current_setpoint = letid_injection_A",
+          "log_event": "LETID_INJECTION_START"
+        },
+        {
+          "name": "measurement_interval",
+          "condition": "elapsed_hours IN [6, 12, 24, 48, 72, 96, 120, 144, 162]",
+          "action": "power_supply.output_enable = 0, trigger_flash_test_sequence",
+          "log_event": "LETID_MEASUREMENT_INTERVAL"
+        },
+        {
+          "name": "resume_after_measurement",
+          "condition": "flash_test_complete AND module_temp_stable_at_75C",
+          "action": "power_supply.output_enable = 1",
+          "log_event": "LETID_INJECTION_RESUME"
+        },
+        {
+          "name": "test_complete",
+          "condition": "elapsed_hours >= 162",
+          "action": "power_supply.output_enable = 0, chamber.command = 'stop'",
+          "log_event": "LETID_TEST_COMPLETE"
+        }
+      ]
+    },
+
+    "pid": {
+      "name": "PID High Voltage Stress Test",
+      "description": "Apply HV stress at 85°C/85%RH for 96 hours",
+      "triggers": [
+        {
+          "name": "start_hv",
+          "condition": "chamber.chamber_temp_actual >= 83.0 AND chamber.chamber_rh_actual >= 80.0 AND stability_check_passed",
+          "action": "power_supply.voltage_setpoint = pid_voltage_V (ramp), power_supply.output_enable = 1",
+          "log_event": "PID_HV_START"
+        },
+        {
+          "name": "leakage_alarm",
+          "condition": "power_supply.current_actual_A > 0.005",
+          "action": "power_supply.emergency_stop = 1, data_logger.log_command = 'mark_event'",
+          "log_event": "PID_LEAKAGE_ALARM",
+          "priority": "critical"
+        },
+        {
+          "name": "measurement_interval",
+          "condition": "elapsed_hours IN [24, 48, 72, 96]",
+          "action": "power_supply.output_enable = 0, discharge_hv, trigger_flash_test_sequence",
+          "log_event": "PID_MEASUREMENT_INTERVAL"
+        },
+        {
+          "name": "test_complete",
+          "condition": "elapsed_hours >= 96",
+          "action": "power_supply.output_enable = 0, discharge_hv, chamber.command = 'stop'",
+          "log_event": "PID_TEST_COMPLETE"
+        }
+      ],
+      "hv_safety": {
+        "ramp_rate_V_per_s": 100,
+        "discharge_before_measurement": true,
+        "discharge_wait_s": 30,
+        "verify_voltage_below_V": 50,
+        "door_interlock_required": true
+      }
+    }
+  },
+
+  "data_logging": {
+    "default_interval_ms": 1000,
+    "file_format": "csv",
+    "file_rotation": "per_cycle",
+    "columns": [
+      "timestamp_iso8601",
+      "elapsed_s",
+      "cycle_number",
+      "phase",
+      "chamber_temp_C",
+      "chamber_rh_percent",
+      "chamber_status",
+      "ch1_voltage_V", "ch1_current_A", "ch1_power_W", "ch1_module_temp_C", "ch1_status",
+      "ch2_voltage_V", "ch2_current_A", "ch2_power_W", "ch2_module_temp_C", "ch2_status",
+      "ch3_voltage_V", "ch3_current_A", "ch3_power_W", "ch3_module_temp_C", "ch3_status",
+      "ch4_voltage_V", "ch4_current_A", "ch4_power_W", "ch4_module_temp_C", "ch4_status",
+      "ch5_voltage_V", "ch5_current_A", "ch5_power_W", "ch5_module_temp_C", "ch5_status",
+      "ch6_voltage_V", "ch6_current_A", "ch6_power_W", "ch6_module_temp_C", "ch6_status",
+      "ch7_voltage_V", "ch7_current_A", "ch7_power_W", "ch7_module_temp_C", "ch7_status",
+      "ch8_voltage_V", "ch8_current_A", "ch8_power_W", "ch8_module_temp_C", "ch8_status",
+      "ch9_voltage_V", "ch9_current_A", "ch9_power_W", "ch9_module_temp_C", "ch9_status",
+      "ch10_voltage_V", "ch10_current_A", "ch10_power_W", "ch10_module_temp_C", "ch10_status",
+      "dc_bus_V",
+      "total_power_W",
+      "event_marker"
+    ],
+    "export_options": ["csv", "excel", "json", "influxdb"]
+  }
+}

@@ -1,0 +1,399 @@
+{
+  "$schema": "pv-marketplace-apis-v1",
+  "version": "1.0.0",
+  "company": "Antaryami Solar Analytics",
+  "description": "Component sourcing marketplace API endpoints, authentication patterns, and rate limits",
+
+  "apis": {
+    "nexar": {
+      "name": "Nexar (Octopart)",
+      "type": "aggregator",
+      "tier": "primary",
+      "endpoint": "https://api.nexar.com/graphql",
+      "protocol": "GraphQL",
+      "auth": {
+        "type": "oauth2_client_credentials",
+        "token_url": "https://identity.nexar.com/connect/token",
+        "env_vars": {
+          "client_id": "NEXAR_CLIENT_ID",
+          "client_secret": "NEXAR_API_KEY"
+        },
+        "scope": "supply.domain",
+        "token_lifetime_s": 3600
+      },
+      "rate_limits": {
+        "requests_per_minute": 60,
+        "requests_per_day": 1000,
+        "parts_per_query": 20,
+        "free_tier_monthly": 1000
+      },
+      "key_queries": {
+        "search_parts": {
+          "description": "Search for components by MPN or keyword",
+          "query": "query SearchParts($q: String!) { supSearchMpn(q: $q, limit: 10) { results { part { mpn manufacturer { name } bestDatasheet { url } medianPrice1000 { price currency } specs { attribute { name } displayValue } sellers { company { name } offers { inventoryLevel prices { quantity price currency } } } } } } }"
+        },
+        "match_parts": {
+          "description": "Exact MPN match across distributors",
+          "query": "query MatchParts($mpns: [String!]!) { supMultiMatch(queries: [{mpn_or_sku: $mpns[0]}]) { hits { part { mpn manufacturer { name } sellers { company { name } offers { inventoryLevel moq prices { quantity price currency } } } } } } }"
+        }
+      },
+      "capabilities": ["part_search", "mpn_match", "pricing", "availability", "datasheets", "specs", "lifecycle_status", "multi_vendor_comparison"],
+      "coverage": "500M+ parts from 4000+ manufacturers"
+    },
+
+    "mouser": {
+      "name": "Mouser Electronics",
+      "type": "distributor",
+      "tier": "primary",
+      "base_url": "https://api.mouser.com/api/v2",
+      "protocol": "REST",
+      "auth": {
+        "type": "api_key",
+        "header": false,
+        "query_param": "apiKey",
+        "env_vars": {
+          "api_key": "MOUSER_API_KEY"
+        },
+        "registration_url": "https://www.mouser.com/api-hub/"
+      },
+      "rate_limits": {
+        "requests_per_day": 1000,
+        "requests_per_second": 1,
+        "free_tier": true
+      },
+      "endpoints": {
+        "search_by_keyword": {
+          "method": "POST",
+          "path": "/search/keyword",
+          "body": {
+            "SearchByKeywordRequest": {
+              "keyword": "string",
+              "records": 50,
+              "startingRecord": 0,
+              "searchOptions": "string",
+              "searchWithYourSignUpLanguage": "string"
+            }
+          }
+        },
+        "search_by_mpn": {
+          "method": "POST",
+          "path": "/search/partnumber",
+          "body": {
+            "SearchByPartRequest": {
+              "mouserPartNumber": "string",
+              "partSearchOptions": "string"
+            }
+          }
+        },
+        "manufacturer_list": {
+          "method": "GET",
+          "path": "/search/manufacturerlist"
+        }
+      },
+      "response_fields": ["MouserPartNumber", "ManufacturerPartNumber", "Manufacturer", "Description", "PriceBreaks", "AvailabilityInStock", "LeadTime", "DataSheetUrl"],
+      "capabilities": ["part_search", "mpn_match", "pricing", "availability", "datasheets", "manufacturer_filter"],
+      "ships_to_india": true
+    },
+
+    "digikey": {
+      "name": "Digi-Key Electronics",
+      "type": "distributor",
+      "tier": "primary",
+      "base_url": "https://api.digikey.com/products/v4",
+      "protocol": "REST",
+      "auth": {
+        "type": "oauth2_authorization_code",
+        "auth_url": "https://api.digikey.com/v1/oauth2/authorize",
+        "token_url": "https://api.digikey.com/v1/oauth2/token",
+        "env_vars": {
+          "client_id": "DIGIKEY_CLIENT_ID",
+          "client_secret": "DIGIKEY_CLIENT_SECRET"
+        },
+        "scopes": ["productinformation"],
+        "registration_url": "https://developer.digikey.com/"
+      },
+      "rate_limits": {
+        "requests_per_minute": 100,
+        "requests_per_day": 1000,
+        "free_tier": true,
+        "production_tier_daily": 10000
+      },
+      "endpoints": {
+        "search": {
+          "method": "POST",
+          "path": "/search/keyword",
+          "headers": {
+            "X-DIGIKEY-Client-Id": "${DIGIKEY_CLIENT_ID}",
+            "Authorization": "Bearer ${access_token}",
+            "X-DIGIKEY-Locale-Site": "IN",
+            "X-DIGIKEY-Locale-Language": "en",
+            "X-DIGIKEY-Locale-Currency": "INR"
+          }
+        },
+        "product_details": {
+          "method": "GET",
+          "path": "/products/{digikey_part_number}"
+        },
+        "manufacturer_product": {
+          "method": "GET",
+          "path": "/search/mpn/{manufacturer_product_number}"
+        }
+      },
+      "response_fields": ["DigiKeyPartNumber", "ManufacturerPartNumber", "Manufacturer", "ProductDescription", "UnitPrice", "QuantityAvailable", "LeadTime", "DatasheetUrl"],
+      "capabilities": ["part_search", "mpn_match", "pricing", "availability", "datasheets", "parametric_filter", "lifecycle_status"],
+      "ships_to_india": true
+    },
+
+    "element14": {
+      "name": "Element14 / Farnell",
+      "type": "distributor",
+      "tier": "secondary",
+      "base_url": "https://api.element14.com",
+      "protocol": "REST",
+      "auth": {
+        "type": "api_key",
+        "query_param": "callInfo.apiKey",
+        "env_vars": {
+          "api_key": "ELEMENT14_API_KEY"
+        },
+        "registration_url": "https://partner.element14.com/"
+      },
+      "rate_limits": {
+        "requests_per_second": 5,
+        "requests_per_day": 5000,
+        "free_tier": true
+      },
+      "endpoints": {
+        "search_by_keyword": {
+          "method": "GET",
+          "path": "/catalog/products",
+          "params": {
+            "storeInfo.id": "in.element14.com",
+            "resultsSettings.offset": 0,
+            "resultsSettings.numberOfResults": 25,
+            "resultsSettings.responseGroup": "large",
+            "term": "any:{keyword}"
+          }
+        },
+        "search_by_mpn": {
+          "method": "GET",
+          "path": "/catalog/products",
+          "params": {
+            "term": "manuPartNum:{mpn}"
+          }
+        }
+      },
+      "response_fields": ["sku", "translatedManufacturerPartNumber", "brandName", "displayName", "prices", "stock", "datasheets"],
+      "capabilities": ["part_search", "mpn_match", "pricing", "availability", "datasheets"],
+      "india_store": "in.element14.com",
+      "ships_to_india": true,
+      "local_presence": true
+    },
+
+    "tme": {
+      "name": "TME (Transfer Multisort Elektronik)",
+      "type": "distributor",
+      "tier": "secondary",
+      "base_url": "https://api.tme.eu",
+      "protocol": "REST",
+      "auth": {
+        "type": "hmac",
+        "method": "HMAC-SHA1",
+        "env_vars": {
+          "api_key": "TME_API_KEY",
+          "api_secret": "TME_API_SECRET"
+        },
+        "signature_base": "POST&{url_encoded_endpoint}&{url_encoded_params}",
+        "registration_url": "https://developers.tme.eu/en/"
+      },
+      "rate_limits": {
+        "requests_per_second": 2,
+        "requests_per_day": 3000,
+        "free_tier": true
+      },
+      "endpoints": {
+        "search": {
+          "method": "POST",
+          "path": "/Products/Search.json",
+          "params": {
+            "Country": "IN",
+            "Language": "EN",
+            "SearchPlain": "string"
+          }
+        },
+        "product_details": {
+          "method": "POST",
+          "path": "/Products/GetProducts.json",
+          "params": {
+            "Country": "IN",
+            "Language": "EN",
+            "SymbolList[]": ["part_number"]
+          }
+        },
+        "prices_and_stock": {
+          "method": "POST",
+          "path": "/Products/GetPricesAndStocks.json",
+          "params": {
+            "Country": "IN",
+            "Currency": "INR",
+            "SymbolList[]": ["part_number"]
+          }
+        }
+      },
+      "response_fields": ["Symbol", "OriginalSymbol", "Producer", "Description", "PriceList", "Amount", "MinAmount"],
+      "capabilities": ["part_search", "mpn_match", "pricing", "availability", "datasheets"],
+      "ships_to_india": true
+    },
+
+    "sourcengine": {
+      "name": "Sourcengine",
+      "type": "aggregator",
+      "tier": "secondary",
+      "base_url": "https://www.sourcengine.com/api",
+      "protocol": "REST",
+      "auth": {
+        "type": "api_key",
+        "header": "Authorization",
+        "format": "Bearer ${api_key}",
+        "env_vars": {
+          "api_key": "SOURCENGINE_API_KEY"
+        },
+        "registration_url": "https://www.sourcengine.com/"
+      },
+      "rate_limits": {
+        "requests_per_minute": 30,
+        "requests_per_day": 500,
+        "note": "Contact for enterprise tier"
+      },
+      "endpoints": {
+        "search": {
+          "method": "GET",
+          "path": "/parts/search",
+          "params": {
+            "q": "search_term",
+            "limit": 20
+          }
+        },
+        "quote": {
+          "method": "POST",
+          "path": "/rfq",
+          "body": {
+            "parts": [{ "mpn": "string", "quantity": "number" }]
+          }
+        }
+      },
+      "capabilities": ["part_search", "multi_vendor_pricing", "rfq", "excess_inventory"],
+      "coverage": "3500+ suppliers aggregated",
+      "ships_to_india": true
+    }
+  },
+
+  "indian_vendors": {
+    "moglix": {
+      "name": "Moglix",
+      "type": "B2B marketplace",
+      "website": "https://www.moglix.com",
+      "api_available": false,
+      "scraping_note": "No public API — use manual search or web scraping where permitted",
+      "categories": ["industrial_components", "electrical", "electronics", "tools"],
+      "payment": ["INR", "GST invoicing"],
+      "delivery": "Pan-India, 2-7 business days",
+      "min_order": "Varies by seller"
+    },
+    "evelta": {
+      "name": "Evelta",
+      "type": "electronic_components",
+      "website": "https://evelta.com",
+      "api_available": false,
+      "categories": ["semiconductors", "passives", "connectors", "dev_boards", "sensors"],
+      "payment": ["INR", "GST invoicing"],
+      "delivery": "Pan-India, 3-7 business days",
+      "strength": "Good stock of common ICs and modules"
+    },
+    "sunrom": {
+      "name": "Sunrom Electronics",
+      "type": "electronic_components",
+      "website": "https://www.sunrom.com",
+      "api_available": false,
+      "categories": ["semiconductors", "passives", "sensors", "power_modules", "connectors"],
+      "payment": ["INR"],
+      "delivery": "Pan-India, 3-5 business days",
+      "strength": "Competitive pricing on power components"
+    },
+    "robocraze": {
+      "name": "Robocraze",
+      "type": "electronic_components",
+      "website": "https://robocraze.com",
+      "api_available": false,
+      "categories": ["dev_boards", "sensors", "motors", "power_modules", "components"],
+      "payment": ["INR", "GST invoicing"],
+      "delivery": "Pan-India, 2-5 business days"
+    },
+    "sp_robotics": {
+      "name": "SP Robotics",
+      "type": "electronic_components",
+      "website": "https://www.sproboticworks.com",
+      "api_available": false,
+      "categories": ["robotics", "dev_boards", "sensors", "actuators"],
+      "payment": ["INR"]
+    }
+  },
+
+  "sourcing_workflow": {
+    "steps": [
+      {
+        "step": 1,
+        "action": "Search Nexar/Octopart with MPN",
+        "note": "Primary source — gives multi-vendor pricing in one query"
+      },
+      {
+        "step": 2,
+        "action": "Cross-check Mouser and Digi-Key for stock and lead times",
+        "note": "Authoritative stock data from major distributors"
+      },
+      {
+        "step": 3,
+        "action": "Check Element14 India store for local pricing and availability",
+        "note": "Local warehouse in India = faster delivery"
+      },
+      {
+        "step": 4,
+        "action": "Query TME for European alternatives with India shipping",
+        "note": "Good for passives and connectors"
+      },
+      {
+        "step": 5,
+        "action": "Use Sourcengine for hard-to-find or long-lead-time parts",
+        "note": "Aggregates excess inventory from 3500+ suppliers"
+      },
+      {
+        "step": 6,
+        "action": "Manual search on Indian vendors (Moglix, Evelta, Sunrom)",
+        "note": "Required: at least one Indian vendor alternative per line item"
+      },
+      {
+        "step": 7,
+        "action": "Generate vendor comparison matrix",
+        "note": "Price, MOQ, lead time, shipping cost across all sources"
+      }
+    ]
+  },
+
+  "common_graphql_variables": {
+    "nexar_currency": "USD",
+    "nexar_country": "IN",
+    "nexar_limit": 10
+  },
+
+  "env_template": {
+    "NEXAR_CLIENT_ID": "your_nexar_client_id",
+    "NEXAR_API_KEY": "your_nexar_api_secret",
+    "MOUSER_API_KEY": "your_mouser_api_key",
+    "DIGIKEY_CLIENT_ID": "your_digikey_client_id",
+    "DIGIKEY_CLIENT_SECRET": "your_digikey_client_secret",
+    "ELEMENT14_API_KEY": "your_element14_api_key",
+    "TME_API_KEY": "your_tme_api_key",
+    "TME_API_SECRET": "your_tme_api_secret",
+    "SOURCENGINE_API_KEY": "your_sourcengine_api_key"
+  }
+}

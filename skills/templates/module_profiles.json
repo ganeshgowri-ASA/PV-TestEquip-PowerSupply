@@ -1,0 +1,182 @@
+{
+  "$schema": "pv-module-profiles-v1",
+  "version": "1.0.0",
+  "company": "Antaryami Solar Analytics",
+
+  "profiles": {
+    "hjt_bifacial": {
+      "name": "HJT Bifacial Module",
+      "cell_type": "Heterojunction (HJT)",
+      "cell_technology": "n-type monocrystalline Si with a-Si:H passivation",
+      "bifacial": true,
+      "bifaciality_factor": 0.85,
+      "cells": 120,
+      "cell_format": "M10 (182mm × 182mm)",
+      "half_cut": true,
+      "electrical": {
+        "voc_V": 60.0,
+        "isc_A": 27.0,
+        "vmpp_V": 50.0,
+        "impp_A": 22.0,
+        "pmax_W": 1100,
+        "ff_percent": 81.5,
+        "efficiency_percent": 22.5,
+        "max_system_voltage_V": 1500,
+        "temp_coeff_pmax_percent_per_C": -0.26,
+        "temp_coeff_voc_mV_per_C": -130,
+        "temp_coeff_isc_mA_per_C": 10
+      },
+      "mechanical": {
+        "length_mm": 2278,
+        "width_mm": 1134,
+        "thickness_mm": 35,
+        "weight_kg": 32.5,
+        "area_m2": 2.583,
+        "glass": "2mm tempered glass (front + rear)",
+        "frame": "Anodized aluminum alloy",
+        "junction_box": "IP68, 3 bypass diodes",
+        "connector": "MC4 compatible"
+      },
+      "test_parameters": {
+        "absi_current_A": 27.0,
+        "letid_injection_A": 2.025,
+        "pid_system_voltage_V": 1500,
+        "pid_susceptibility": "PID-p (reversible, n-type)",
+        "insulation_test_V": 1120,
+        "notes": "HJT is less susceptible to LeTID but can show PID-p"
+      }
+    },
+
+    "perc_mono": {
+      "name": "PERC Mono Module",
+      "cell_type": "PERC (Passivated Emitter and Rear Cell)",
+      "cell_technology": "p-type monocrystalline Si with Al₂O₃/SiNx rear passivation",
+      "bifacial": false,
+      "cells": 144,
+      "cell_format": "M10 (182mm × 182mm)",
+      "half_cut": true,
+      "electrical": {
+        "voc_V": 49.5,
+        "isc_A": 18.5,
+        "vmpp_V": 41.5,
+        "impp_A": 17.6,
+        "pmax_W": 540,
+        "ff_percent": 80.0,
+        "efficiency_percent": 21.0,
+        "max_system_voltage_V": 1500,
+        "temp_coeff_pmax_percent_per_C": -0.35,
+        "temp_coeff_voc_mV_per_C": -120,
+        "temp_coeff_isc_mA_per_C": 8
+      },
+      "mechanical": {
+        "length_mm": 2278,
+        "width_mm": 1134,
+        "thickness_mm": 35,
+        "weight_kg": 28.0,
+        "area_m2": 2.583,
+        "glass": "3.2mm tempered glass (front)",
+        "backsheet": "TPT or TPE",
+        "frame": "Anodized aluminum alloy",
+        "junction_box": "IP68, 3 bypass diodes",
+        "connector": "MC4 compatible"
+      },
+      "test_parameters": {
+        "absi_current_A": 18.5,
+        "letid_injection_A": 1.39,
+        "pid_system_voltage_V": 1500,
+        "pid_susceptibility": "PID-s (shunting, p-type, high risk)",
+        "insulation_test_V": 1099,
+        "notes": "PERC is susceptible to both LeTID and PID-s. Requires extended LeTID testing."
+      }
+    },
+
+    "topcon": {
+      "name": "TOPCon Module",
+      "cell_type": "TOPCon (Tunnel Oxide Passivated Contact)",
+      "cell_technology": "n-type monocrystalline Si with ultra-thin SiO₂ + poly-Si passivation",
+      "bifacial": true,
+      "bifaciality_factor": 0.80,
+      "cells": 144,
+      "cell_format": "M10 (182mm × 182mm)",
+      "half_cut": true,
+      "electrical": {
+        "voc_V": 51.8,
+        "isc_A": 18.8,
+        "vmpp_V": 43.5,
+        "impp_A": 17.9,
+        "pmax_W": 580,
+        "ff_percent": 81.0,
+        "efficiency_percent": 22.0,
+        "max_system_voltage_V": 1500,
+        "temp_coeff_pmax_percent_per_C": -0.30,
+        "temp_coeff_voc_mV_per_C": -125,
+        "temp_coeff_isc_mA_per_C": 9
+      },
+      "mechanical": {
+        "length_mm": 2278,
+        "width_mm": 1134,
+        "thickness_mm": 35,
+        "weight_kg": 30.0,
+        "area_m2": 2.583,
+        "glass": "2mm tempered glass (front + rear)",
+        "frame": "Anodized aluminum alloy",
+        "junction_box": "IP68, 3 bypass diodes",
+        "connector": "MC4 compatible"
+      },
+      "test_parameters": {
+        "absi_current_A": 18.8,
+        "letid_injection_A": 1.41,
+        "pid_system_voltage_V": 1500,
+        "pid_susceptibility": "PID-p (reversible, n-type, lower risk than HJT)",
+        "insulation_test_V": 1104,
+        "notes": "TOPCon shows low LeTID susceptibility. PID-p is recoverable."
+      }
+    },
+
+    "custom": {
+      "name": "Custom Module Profile",
+      "cell_type": "user_defined",
+      "cell_technology": "user_defined",
+      "bifacial": false,
+      "cells": null,
+      "cell_format": null,
+      "half_cut": null,
+      "electrical": {
+        "voc_V": null,
+        "isc_A": null,
+        "vmpp_V": null,
+        "impp_A": null,
+        "pmax_W": null,
+        "ff_percent": null,
+        "efficiency_percent": null,
+        "max_system_voltage_V": null,
+        "temp_coeff_pmax_percent_per_C": null,
+        "temp_coeff_voc_mV_per_C": null,
+        "temp_coeff_isc_mA_per_C": null
+      },
+      "mechanical": {
+        "length_mm": null,
+        "width_mm": null,
+        "thickness_mm": null,
+        "weight_kg": null,
+        "area_m2": null
+      },
+      "test_parameters": {
+        "absi_current_A": "= isc_A",
+        "letid_injection_A": "= isc_A × 0.075",
+        "pid_system_voltage_V": "= max_system_voltage_V",
+        "insulation_test_V": "= 1000 + 2 × voc_V",
+        "notes": "Fill in all null fields with actual module datasheet values"
+      }
+    }
+  },
+
+  "derived_calculations": {
+    "absi_current": "Isc of module under test",
+    "letid_injection_current": "Isc × 0.075 (7.5%)",
+    "insulation_test_voltage": "1000V + 2 × Voc",
+    "power_supply_voltage_headroom": "Voc × 1.2",
+    "power_supply_current_headroom": "Isc × 1.1",
+    "tc_hf_power_per_channel": "Voc × 1.2 × Isc × 1.1"
+  }
+}
