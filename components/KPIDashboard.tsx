@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ModuleSelector from '@/components/ModuleSelector';
+import type { PVModule } from '@/data/moduleDatabase';
 
 const KPI_CARDS = [
   {
@@ -27,7 +30,18 @@ const KPI_CARDS = [
   },
 ];
 
-const MODULE_SPECS = [
+function moduleToSpecs(m: PVModule) {
+  return [
+    { label: 'Technology', value: m.technology },
+    { label: 'Voc', value: `${m.Voc}V` },
+    { label: 'Isc', value: `${m.Isc}A` },
+    { label: 'Pmax', value: `${m.Pmax}W` },
+    { label: 'Efficiency', value: `${m.efficiency}%` },
+    { label: 'Channels/Rack', value: '10' },
+  ];
+}
+
+const DEFAULT_MODULE_SPECS = [
   { label: 'Technology', value: 'HJT Bifacial' },
   { label: 'Voc', value: '60V' },
   { label: 'Isc', value: '27A' },
@@ -37,6 +51,13 @@ const MODULE_SPECS = [
 ];
 
 export default function KPIDashboard() {
+  const [selectedModule, setSelectedModule] = useState<PVModule | null>(null);
+
+  const specs = selectedModule ? moduleToSpecs(selectedModule) : DEFAULT_MODULE_SPECS;
+  const moduleLabel = selectedModule
+    ? `${selectedModule.manufacturer} — ${selectedModule.model}`
+    : 'HJT Bifacial (Default)';
+
   return (
     <div className="space-y-6">
       <div>
@@ -69,20 +90,65 @@ export default function KPIDashboard() {
         ))}
       </div>
 
-      {/* Module Specs */}
+      {/* Module Selector */}
+      <ModuleSelector onSelect={setSelectedModule} selected={selectedModule} />
+
+      {/* Module Specs — dynamic based on selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Target Module — HJT Bifacial</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Target Module — {moduleLabel}</CardTitle>
+            {selectedModule && (
+              <button
+                className="text-xs text-gray-500 hover:text-gray-300"
+                onClick={() => setSelectedModule(null)}
+              >
+                Reset to default
+              </button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {MODULE_SPECS.map(({ label, value }) => (
+            {specs.map(({ label, value }) => (
               <div key={label} className="text-center">
                 <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
                 <p className="text-lg font-semibold text-blue-300 mt-1">{value}</p>
               </div>
             ))}
           </div>
+
+          {/* Show test limits when a module is selected */}
+          {selectedModule && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Test Limits (auto-computed)</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="bg-gray-900 rounded-md p-2">
+                  <p className="text-xs text-gray-500 font-semibold mb-1">TC</p>
+                  <p>Vmax: <span className="text-blue-300 font-mono">{selectedModule.testLimits.tc.Vmax}V</span></p>
+                  <p>Isc: <span className="text-blue-300 font-mono">{selectedModule.testLimits.tc.Isc}A</span></p>
+                </div>
+                <div className="bg-gray-900 rounded-md p-2">
+                  <p className="text-xs text-gray-500 font-semibold mb-1">HF</p>
+                  <p>Vmax: <span className="text-blue-300 font-mono">{selectedModule.testLimits.hf.Vmax}V</span></p>
+                  <p>Freq: <span className="text-blue-300 font-mono">{selectedModule.testLimits.hf.freq}Hz</span></p>
+                  <p>Isc: <span className="text-blue-300 font-mono">{selectedModule.testLimits.hf.Isc}A</span></p>
+                </div>
+                <div className="bg-gray-900 rounded-md p-2">
+                  <p className="text-xs text-gray-500 font-semibold mb-1">LETID</p>
+                  <p>Iinj: <span className="text-blue-300 font-mono">{selectedModule.testLimits.letid.Iinject}A</span></p>
+                  <p>Voc: <span className="text-blue-300 font-mono">{selectedModule.testLimits.letid.Voc}V</span></p>
+                  <p>Cell: <span className="text-blue-300 font-mono">{selectedModule.testLimits.letid.cellTemp}°C</span></p>
+                </div>
+                <div className="bg-gray-900 rounded-md p-2">
+                  <p className="text-xs text-gray-500 font-semibold mb-1">PID</p>
+                  <p>Vbias: <span className="text-blue-300 font-mono">{selectedModule.testLimits.pid.Vbias}V</span></p>
+                  <p>Ileak: <span className="text-blue-300 font-mono">{selectedModule.testLimits.pid.ImaxLeak}mA</span></p>
+                  <p>Dur: <span className="text-blue-300 font-mono">{selectedModule.testLimits.pid.duration}h</span></p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
