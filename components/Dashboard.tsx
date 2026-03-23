@@ -23,7 +23,12 @@ const TABS = [
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('kpi');
-
+  const [toasts, setToasts] = useState<{id:number;msg:string;type:string}[]>([]);
+  const addToast = (msg:string, type='success') => {
+    const id = Date.now();
+    setToasts(p=>[...p,{id,msg,type}]);
+    setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3000);
+  };
   return (
     <ToastProvider>
       <div className="min-h-screen bg-gray-950 text-white">
