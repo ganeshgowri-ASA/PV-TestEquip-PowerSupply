@@ -1,173 +1,221 @@
-// PV Module Database — comprehensive specs for reliability testing
-// Covers: LONGi, JA Solar, Trina, Canadian Solar, Jinko, First Solar,
-// Risen, CSUN, HT-SAAE, REC, Panasonic, SunPower, Meyer Burger,
-// Waaree, Adani Solar, Vikram Solar, Renewsys
-
-export type Technology =
-  | 'PERC'
-  | 'TOPCon'
-  | 'HJT'
-  | 'HBC'
-  | 'Bifacial'
-  | 'Monofacial'
-  | 'Tandem'
-  | 'CIGS'
-  | 'CdTe'
-  | 'n-type'
-  | 'p-type';
+// PV Module Database — 80+ models across 15 manufacturers
+// Technologies: PERC, TOPCon, HJT, HBC, Bifacial, Tandem, CIGS, CdTe
 
 export interface TestLimits {
-  tc: { Vmax: number; Isc_TC: number };
-  hf: { Vmax: number; frequency: number; Isc_HF: number };
+  tc: { Vmax: number; Isc: number };
+  hf: { Vmax: number; freq: number; Isc: number };
   letid: { Iinject: number; Voc: number; cellTemp: number };
-  pid: { Vbias: number; Imax_leak: number; duration: number };
+  pid: { Vbias: number; ImaxLeak: number; duration: number };
 }
 
 export interface PVModule {
-  id: string;
   manufacturer: string;
   model: string;
-  technology: Technology;
+  technology: string;
   Pmax: number;
   Voc: number;
   Isc: number;
   Vmp: number;
   Imp: number;
   efficiency: number;
-  wafer: string;
   testLimits: TestLimits;
 }
 
-function makeTestLimits(Voc: number, Isc: number, opts?: { pidVbias?: number }): TestLimits {
-  const pidV = opts?.pidVbias ?? 1000;
+function calcTestLimits(mod: {
+  Voc: number;
+  Isc: number;
+  Pmax: number;
+  technology: string;
+}): TestLimits {
+  const isThinFilm = ['CdTe', 'CIGS'].includes(mod.technology);
   return {
-    tc: { Vmax: Voc * 1.15, Isc_TC: Isc },
-    hf: { Vmax: Voc * 1.15, frequency: 1, Isc_HF: Isc },
-    letid: { Iinject: Isc, Voc, cellTemp: 75 },
-    pid: { Vbias: pidV, Imax_leak: 5, duration: 96 },
+    tc: {
+      Vmax: Math.ceil(mod.Voc * 1.1),
+      Isc: mod.Isc,
+    },
+    hf: {
+      Vmax: Math.ceil(mod.Voc * 1.1),
+      freq: 10,
+      Isc: mod.Isc,
+    },
+    letid: {
+      Iinject: Math.round(mod.Isc * 100) / 100,
+      Voc: mod.Voc,
+      cellTemp: 75,
+    },
+    pid: {
+      Vbias: isThinFilm ? 1000 : 1500,
+      ImaxLeak: 5,
+      duration: 96,
+    },
   };
 }
 
-export const MODULE_DATABASE: PVModule[] = [
-  // ==================== LONGi ====================
-  { id: 'longi-1', manufacturer: 'LONGi', model: 'Hi-MO 7 LR5-72HGD 580M', technology: 'HJT', Pmax: 580, Voc: 51.50, Isc: 14.35, Vmp: 43.30, Imp: 13.40, efficiency: 22.5, wafer: 'M10', testLimits: makeTestLimits(51.50, 14.35) },
-  { id: 'longi-2', manufacturer: 'LONGi', model: 'Hi-MO 6 LR5-72HPH 560M', technology: 'PERC', Pmax: 560, Voc: 49.95, Isc: 14.22, Vmp: 42.10, Imp: 13.30, efficiency: 21.8, wafer: 'M10', testLimits: makeTestLimits(49.95, 14.22) },
-  { id: 'longi-3', manufacturer: 'LONGi', model: 'Hi-MO X6 LR7-72HBD 620M', technology: 'HBC', Pmax: 620, Voc: 53.80, Isc: 14.75, Vmp: 44.50, Imp: 13.93, efficiency: 23.3, wafer: 'G12', testLimits: makeTestLimits(53.80, 14.75) },
-  { id: 'longi-4', manufacturer: 'LONGi', model: 'Hi-MO 5 LR5-54HPH 420M', technology: 'PERC', Pmax: 420, Voc: 37.25, Isc: 14.18, Vmp: 31.50, Imp: 13.33, efficiency: 21.3, wafer: 'M10', testLimits: makeTestLimits(37.25, 14.18) },
-  { id: 'longi-5', manufacturer: 'LONGi', model: 'Hi-MO 9 LR7-72HBD 660M', technology: 'HBC', Pmax: 660, Voc: 55.20, Isc: 15.30, Vmp: 46.00, Imp: 14.35, efficiency: 24.0, wafer: 'G12', testLimits: makeTestLimits(55.20, 15.30) },
+function m(
+  manufacturer: string,
+  model: string,
+  technology: string,
+  Pmax: number,
+  Voc: number,
+  Isc: number,
+  Vmp: number,
+  Imp: number,
+  efficiency: number
+): PVModule {
+  return {
+    manufacturer,
+    model,
+    technology,
+    Pmax,
+    Voc,
+    Isc,
+    Vmp,
+    Imp,
+    efficiency,
+    testLimits: calcTestLimits({ Voc, Isc, Pmax, technology }),
+  };
+}
 
-  // ==================== JA Solar ====================
-  { id: 'ja-1', manufacturer: 'JA Solar', model: 'DeepBlue 4.0 Pro JAM72D42-585/LB', technology: 'TOPCon', Pmax: 585, Voc: 51.88, Isc: 14.45, Vmp: 43.62, Imp: 13.41, efficiency: 22.6, wafer: 'M10', testLimits: makeTestLimits(51.88, 14.45) },
-  { id: 'ja-2', manufacturer: 'JA Solar', model: 'DeepBlue 3.0 JAM72S30-540/MR', technology: 'PERC', Pmax: 540, Voc: 49.42, Isc: 13.95, Vmp: 41.52, Imp: 13.01, efficiency: 21.0, wafer: 'M10', testLimits: makeTestLimits(49.42, 13.95) },
-  { id: 'ja-3', manufacturer: 'JA Solar', model: 'DeepBlue 4.0 JAM54D40-440/LB', technology: 'TOPCon', Pmax: 440, Voc: 38.14, Isc: 14.55, Vmp: 32.55, Imp: 13.52, efficiency: 22.3, wafer: 'M10', testLimits: makeTestLimits(38.14, 14.55) },
-  { id: 'ja-4', manufacturer: 'JA Solar', model: 'DeepBlue 4.0 JAM78D42-620/LB', technology: 'TOPCon', Pmax: 620, Voc: 54.35, Isc: 14.60, Vmp: 45.90, Imp: 13.51, efficiency: 22.8, wafer: 'M10', testLimits: makeTestLimits(54.35, 14.60) },
-  { id: 'ja-5', manufacturer: 'JA Solar', model: 'DeepBlue 3.0 JAM60S20-380/MR', technology: 'PERC', Pmax: 380, Voc: 34.82, Isc: 13.88, Vmp: 29.36, Imp: 12.95, efficiency: 20.7, wafer: 'M10', testLimits: makeTestLimits(34.82, 13.88) },
+export const moduleDatabase: PVModule[] = [
+  // ── LONGi (8 models) ──────────────────────────────────────────
+  m('LONGi', 'LR5-72HBD-545M', 'PERC Bifacial', 545, 49.65, 13.85, 41.65, 13.09, 21.1),
+  m('LONGi', 'LR5-72HPH-555M', 'PERC', 555, 49.95, 14.03, 41.80, 13.28, 21.3),
+  m('LONGi', 'LR7-72HGD-620M', 'TOPCon Bifacial', 620, 51.50, 15.18, 43.30, 14.32, 22.5),
+  m('LONGi', 'LR7-72HGD-580M', 'TOPCon Bifacial', 580, 50.80, 14.40, 42.60, 13.62, 22.0),
+  m('LONGi', 'LR5-54HPB-410M', 'PERC', 410, 37.20, 13.92, 31.10, 13.18, 21.0),
+  m('LONGi', 'LR7-54HGD-440M', 'TOPCon', 440, 38.50, 14.42, 32.20, 13.66, 22.3),
+  m('LONGi', 'LR5-66HPH-505M', 'PERC', 505, 45.60, 13.98, 38.20, 13.22, 20.9),
+  m('LONGi', 'LR7-66HGD-560M', 'TOPCon Bifacial', 560, 47.30, 14.94, 39.60, 14.14, 22.1),
 
-  // ==================== Trina Solar ====================
-  { id: 'trina-1', manufacturer: 'Trina Solar', model: 'Vertex N TSM-DE21 700W', technology: 'TOPCon', Pmax: 700, Voc: 48.80, Isc: 18.49, Vmp: 41.10, Imp: 17.03, efficiency: 22.5, wafer: 'G12', testLimits: makeTestLimits(48.80, 18.49) },
-  { id: 'trina-2', manufacturer: 'Trina Solar', model: 'Vertex S+ TSM-NEG9R.28 445W', technology: 'TOPCon', Pmax: 445, Voc: 38.60, Isc: 14.68, Vmp: 32.40, Imp: 13.73, efficiency: 22.5, wafer: 'M10', testLimits: makeTestLimits(38.60, 14.68) },
-  { id: 'trina-3', manufacturer: 'Trina Solar', model: 'Vertex S TSM-DE09.08 405W', technology: 'PERC', Pmax: 405, Voc: 36.86, Isc: 13.92, Vmp: 31.00, Imp: 13.06, efficiency: 21.1, wafer: 'M10', testLimits: makeTestLimits(36.86, 13.92) },
-  { id: 'trina-4', manufacturer: 'Trina Solar', model: 'Vertex N TSM-NEG19RC.20 590W', technology: 'TOPCon', Pmax: 590, Voc: 52.10, Isc: 14.52, Vmp: 43.80, Imp: 13.47, efficiency: 22.7, wafer: 'M10', testLimits: makeTestLimits(52.10, 14.52) },
-  { id: 'trina-5', manufacturer: 'Trina Solar', model: 'Vertex N TSM-DE21 750W', technology: 'TOPCon', Pmax: 750, Voc: 50.20, Isc: 19.25, Vmp: 42.30, Imp: 17.73, efficiency: 23.2, wafer: 'G12', testLimits: makeTestLimits(50.20, 19.25) },
+  // ── JA Solar (8 models) ───────────────────────────────────────
+  m('JA Solar', 'JAM72S30-545/MR', 'PERC', 545, 49.72, 13.83, 41.82, 13.03, 21.0),
+  m('JA Solar', 'JAM72D40-580/MB', 'TOPCon Bifacial', 580, 51.28, 14.27, 43.08, 13.47, 22.4),
+  m('JA Solar', 'JAM72D41-620/MB', 'TOPCon Bifacial', 620, 51.90, 15.06, 43.60, 14.22, 22.6),
+  m('JA Solar', 'JAM54S31-410/MR', 'PERC', 410, 37.10, 13.95, 31.00, 13.23, 21.1),
+  m('JA Solar', 'JAM54D40-440/MB', 'TOPCon Bifacial', 440, 38.60, 14.38, 32.30, 13.62, 22.2),
+  m('JA Solar', 'JAM66S30-500/MR', 'PERC', 500, 45.50, 13.87, 38.10, 13.12, 20.8),
+  m('JA Solar', 'JAM78D40-630/MB', 'TOPCon Bifacial', 630, 53.80, 14.76, 45.20, 13.94, 22.5),
+  m('JA Solar', 'JAM60S20-380/MR', 'PERC', 380, 41.50, 11.56, 34.80, 10.92, 20.2),
 
-  // ==================== Canadian Solar ====================
-  { id: 'cs-1', manufacturer: 'Canadian Solar', model: 'HiKu7 CS7N-665TB-AG', technology: 'TOPCon', Pmax: 665, Voc: 47.20, Isc: 18.15, Vmp: 39.80, Imp: 16.71, efficiency: 22.3, wafer: 'G12', testLimits: makeTestLimits(47.20, 18.15) },
-  { id: 'cs-2', manufacturer: 'Canadian Solar', model: 'HiKu6 CS6R-425H-AG', technology: 'PERC', Pmax: 425, Voc: 37.20, Isc: 14.42, Vmp: 31.40, Imp: 13.54, efficiency: 21.5, wafer: 'M10', testLimits: makeTestLimits(37.20, 14.42) },
-  { id: 'cs-3', manufacturer: 'Canadian Solar', model: 'HiKu7 CS7L-595MS', technology: 'PERC', Pmax: 595, Voc: 52.30, Isc: 14.50, Vmp: 44.00, Imp: 13.52, efficiency: 21.4, wafer: 'G12', testLimits: makeTestLimits(52.30, 14.50) },
-  { id: 'cs-4', manufacturer: 'Canadian Solar', model: 'TOPBiHiKu7 CS7N-720TB-AG', technology: 'TOPCon', Pmax: 720, Voc: 49.60, Isc: 18.72, Vmp: 41.80, Imp: 17.22, efficiency: 22.8, wafer: 'G12', testLimits: makeTestLimits(49.60, 18.72) },
-  { id: 'cs-5', manufacturer: 'Canadian Solar', model: 'HiKu6 CS6W-545MS', technology: 'PERC', Pmax: 545, Voc: 49.20, Isc: 14.10, Vmp: 41.30, Imp: 13.20, efficiency: 21.2, wafer: 'M10', testLimits: makeTestLimits(49.20, 14.10) },
+  // ── Trina Solar (7 models) ────────────────────────────────────
+  m('Trina Solar', 'TSM-DE21-600', 'TOPCon Bifacial', 600, 51.30, 14.74, 43.10, 13.92, 22.3),
+  m('Trina Solar', 'TSM-DE20-545', 'PERC Bifacial', 545, 49.60, 13.88, 41.50, 13.13, 21.1),
+  m('Trina Solar', 'TSM-NEG21C.20-620', 'TOPCon Bifacial', 620, 52.10, 15.02, 43.70, 14.19, 22.5),
+  m('Trina Solar', 'TSM-DE09.08-410', 'PERC', 410, 37.30, 13.89, 31.20, 13.14, 21.0),
+  m('Trina Solar', 'TSM-NEG9RC.27-440', 'TOPCon', 440, 38.70, 14.34, 32.40, 13.58, 22.1),
+  m('Trina Solar', 'TSM-DE18M.08-500', 'PERC', 500, 45.40, 13.90, 38.00, 13.16, 20.7),
+  m('Trina Solar', 'TSM-NEG19RC.20-580', 'TOPCon Bifacial', 580, 50.60, 14.47, 42.40, 13.68, 22.0),
 
-  // ==================== Jinko Solar ====================
-  { id: 'jinko-1', manufacturer: 'Jinko Solar', model: 'Tiger Neo JKM580N-72HL4-BDV', technology: 'TOPCon', Pmax: 580, Voc: 51.72, Isc: 14.38, Vmp: 43.56, Imp: 13.32, efficiency: 22.53, wafer: 'M10', testLimits: makeTestLimits(51.72, 14.38) },
-  { id: 'jinko-2', manufacturer: 'Jinko Solar', model: 'Tiger Neo JKM450N-54HL4-V', technology: 'TOPCon', Pmax: 450, Voc: 38.42, Isc: 14.84, Vmp: 33.72, Imp: 13.35, efficiency: 22.27, wafer: 'M10', testLimits: makeTestLimits(38.42, 14.84) },
-  { id: 'jinko-3', manufacturer: 'Jinko Solar', model: 'Tiger Pro JKM545M-72HL4-V', technology: 'PERC', Pmax: 545, Voc: 49.62, Isc: 13.98, Vmp: 41.64, Imp: 13.09, efficiency: 21.21, wafer: 'M10', testLimits: makeTestLimits(49.62, 13.98) },
-  { id: 'jinko-4', manufacturer: 'Jinko Solar', model: 'Tiger Neo JKM700N-78HL4-BDV', technology: 'TOPCon', Pmax: 700, Voc: 54.58, Isc: 16.50, Vmp: 45.95, Imp: 15.23, efficiency: 22.65, wafer: 'G12', testLimits: makeTestLimits(54.58, 16.50) },
-  { id: 'jinko-5', manufacturer: 'Jinko Solar', model: 'Tiger Neo JKM620N-78HL4-BDV', technology: 'TOPCon', Pmax: 620, Voc: 52.10, Isc: 15.28, Vmp: 43.88, Imp: 14.13, efficiency: 22.02, wafer: 'M10', testLimits: makeTestLimits(52.10, 15.28) },
+  // ── Canadian Solar (7 models) ─────────────────────────────────
+  m('Canadian Solar', 'CS7N-600TB-AG', 'TOPCon Bifacial', 600, 51.40, 14.71, 43.20, 13.89, 22.3),
+  m('Canadian Solar', 'CS6W-545MS', 'PERC', 545, 49.80, 13.81, 41.70, 13.07, 21.0),
+  m('Canadian Solar', 'CS7N-620TB-AG', 'TOPCon Bifacial', 620, 52.00, 15.04, 43.60, 14.22, 22.5),
+  m('Canadian Solar', 'CS6R-410MS', 'PERC', 410, 37.40, 13.84, 31.30, 13.10, 20.9),
+  m('Canadian Solar', 'CS7L-580TB-AG', 'TOPCon Bifacial', 580, 50.70, 14.44, 42.50, 13.65, 22.1),
+  m('Canadian Solar', 'CS6W-500MS', 'PERC', 500, 45.30, 13.93, 37.90, 13.19, 20.8),
+  m('Canadian Solar', 'CS7N-440TB-AG', 'TOPCon Bifacial', 440, 38.80, 14.30, 32.50, 13.54, 22.0),
 
-  // ==================== First Solar ====================
-  { id: 'fs-1', manufacturer: 'First Solar', model: 'Series 7 FS-7445A', technology: 'CdTe', Pmax: 445, Voc: 219.2, Isc: 2.56, Vmp: 184.5, Imp: 2.41, efficiency: 18.5, wafer: 'Thin-Film', testLimits: makeTestLimits(219.2, 2.56, { pidVbias: 1000 }) },
-  { id: 'fs-2', manufacturer: 'First Solar', model: 'Series 7 FS-7460A', technology: 'CdTe', Pmax: 460, Voc: 221.5, Isc: 2.62, Vmp: 186.8, Imp: 2.46, efficiency: 19.1, wafer: 'Thin-Film', testLimits: makeTestLimits(221.5, 2.62, { pidVbias: 1000 }) },
-  { id: 'fs-3', manufacturer: 'First Solar', model: 'Series 6 Plus FS-6420A', technology: 'CdTe', Pmax: 420, Voc: 218.0, Isc: 2.44, Vmp: 182.0, Imp: 2.31, efficiency: 18.2, wafer: 'Thin-Film', testLimits: makeTestLimits(218.0, 2.44, { pidVbias: 1000 }) },
-  { id: 'fs-4', manufacturer: 'First Solar', model: 'Series 7 FS-7475A', technology: 'CdTe', Pmax: 475, Voc: 223.0, Isc: 2.68, Vmp: 188.5, Imp: 2.52, efficiency: 19.5, wafer: 'Thin-Film', testLimits: makeTestLimits(223.0, 2.68, { pidVbias: 1000 }) },
-  { id: 'fs-5', manufacturer: 'First Solar', model: 'Series 6 FS-6400', technology: 'CdTe', Pmax: 400, Voc: 216.0, Isc: 2.35, Vmp: 180.5, Imp: 2.22, efficiency: 17.7, wafer: 'Thin-Film', testLimits: makeTestLimits(216.0, 2.35, { pidVbias: 1000 }) },
+  // ── Jinko Solar (7 models) ────────────────────────────────────
+  m('Jinko Solar', 'JKM545M-72HL4-V', 'PERC', 545, 49.70, 13.86, 41.60, 13.10, 21.1),
+  m('Jinko Solar', 'JKM620N-78HL4-BDV', 'TOPCon Bifacial', 620, 52.20, 14.98, 43.80, 14.16, 22.5),
+  m('Jinko Solar', 'JKM580N-72HL4-BDV', 'TOPCon Bifacial', 580, 50.90, 14.38, 42.70, 13.58, 22.0),
+  m('Jinko Solar', 'JKM410M-54HL4-V', 'PERC', 410, 37.50, 13.82, 31.40, 13.06, 20.9),
+  m('Jinko Solar', 'JKM440N-54HL4-BDV', 'TOPCon Bifacial', 440, 38.90, 14.27, 32.60, 13.50, 22.1),
+  m('Jinko Solar', 'JKM500M-66HL4-V', 'PERC', 500, 45.20, 13.96, 37.80, 13.23, 20.8),
+  m('Jinko Solar', 'JKM600N-72HL4-BDV', 'TOPCon Bifacial', 600, 51.60, 14.66, 43.30, 13.86, 22.3),
 
-  // ==================== Risen Energy ====================
-  { id: 'risen-1', manufacturer: 'Risen Energy', model: 'Titan S RSM40-8-410M', technology: 'PERC', Pmax: 410, Voc: 37.04, Isc: 14.00, Vmp: 31.22, Imp: 13.13, efficiency: 21.1, wafer: 'M10', testLimits: makeTestLimits(37.04, 14.00) },
-  { id: 'risen-2', manufacturer: 'Risen Energy', model: 'Hyper-ion RSM132-8-685BHDG', technology: 'HJT', Pmax: 685, Voc: 48.56, Isc: 18.20, Vmp: 40.80, Imp: 16.79, efficiency: 22.7, wafer: 'G12', testLimits: makeTestLimits(48.56, 18.20) },
-  { id: 'risen-3', manufacturer: 'Risen Energy', model: 'Titan RSM110-8-545M', technology: 'PERC', Pmax: 545, Voc: 49.55, Isc: 14.00, Vmp: 41.60, Imp: 13.10, efficiency: 21.1, wafer: 'M10', testLimits: makeTestLimits(49.55, 14.00) },
-  { id: 'risen-4', manufacturer: 'Risen Energy', model: 'Hyper-ion RSM110-8-580BHDG', technology: 'HJT', Pmax: 580, Voc: 51.20, Isc: 14.48, Vmp: 43.10, Imp: 13.46, efficiency: 22.5, wafer: 'M10', testLimits: makeTestLimits(51.20, 14.48) },
-  { id: 'risen-5', manufacturer: 'Risen Energy', model: 'Titan S RSM40-8-430N', technology: 'TOPCon', Pmax: 430, Voc: 37.80, Isc: 14.42, Vmp: 31.90, Imp: 13.48, efficiency: 22.0, wafer: 'M10', testLimits: makeTestLimits(37.80, 14.42) },
+  // ── First Solar (5 models) ────────────────────────────────────
+  m('First Solar', 'FS-6445', 'CdTe', 445, 218.0, 2.58, 183.0, 2.43, 19.3),
+  m('First Solar', 'FS-6460', 'CdTe', 460, 219.5, 2.65, 184.5, 2.49, 19.8),
+  m('First Solar', 'FS-6475', 'CdTe', 475, 220.8, 2.72, 185.8, 2.56, 20.1),
+  m('First Solar', 'FS-7490', 'CdTe', 490, 221.0, 2.80, 186.0, 2.63, 20.4),
+  m('First Solar', 'FS-7510', 'CdTe', 510, 222.5, 2.90, 187.0, 2.73, 20.9),
 
-  // ==================== CSUN ====================
-  { id: 'csun-1', manufacturer: 'CSUN', model: 'CSUN550-144M-HE', technology: 'PERC', Pmax: 550, Voc: 49.80, Isc: 14.08, Vmp: 41.90, Imp: 13.13, efficiency: 21.3, wafer: 'M10', testLimits: makeTestLimits(49.80, 14.08) },
-  { id: 'csun-2', manufacturer: 'CSUN', model: 'CSUN410-108M-HE', technology: 'PERC', Pmax: 410, Voc: 37.30, Isc: 13.98, Vmp: 31.40, Imp: 13.06, efficiency: 21.0, wafer: 'M10', testLimits: makeTestLimits(37.30, 13.98) },
-  { id: 'csun-3', manufacturer: 'CSUN', model: 'CSUN580-144N-HE', technology: 'TOPCon', Pmax: 580, Voc: 51.60, Isc: 14.35, Vmp: 43.40, Imp: 13.36, efficiency: 22.4, wafer: 'M10', testLimits: makeTestLimits(51.60, 14.35) },
-  { id: 'csun-4', manufacturer: 'CSUN', model: 'CSUN440-108N-HE', technology: 'TOPCon', Pmax: 440, Voc: 38.20, Isc: 14.60, Vmp: 32.30, Imp: 13.62, efficiency: 22.2, wafer: 'M10', testLimits: makeTestLimits(38.20, 14.60) },
-  { id: 'csun-5', manufacturer: 'CSUN', model: 'CSUN670-132N-HE', technology: 'TOPCon', Pmax: 670, Voc: 47.40, Isc: 18.20, Vmp: 39.90, Imp: 16.79, efficiency: 22.5, wafer: 'G12', testLimits: makeTestLimits(47.40, 18.20) },
+  // ── Risen Energy (5 models) ───────────────────────────────────
+  m('Risen Energy', 'RSM144-9-545M', 'PERC', 545, 49.50, 13.90, 41.40, 13.16, 21.0),
+  m('Risen Energy', 'RSM144-10-580N', 'TOPCon Bifacial', 580, 50.80, 14.41, 42.60, 13.62, 22.0),
+  m('Risen Energy', 'RSM144-10-620N', 'TOPCon Bifacial', 620, 51.70, 15.12, 43.40, 14.29, 22.4),
+  m('Risen Energy', 'RSM108-9-410M', 'PERC', 410, 37.20, 13.91, 31.10, 13.18, 21.0),
+  m('Risen Energy', 'RSM120-10-440N', 'TOPCon', 440, 38.40, 14.48, 32.10, 13.71, 22.2),
 
-  // ==================== HT-SAAE ====================
-  { id: 'htsaae-1', manufacturer: 'HT-SAAE', model: 'HTM545MH-72', technology: 'PERC', Pmax: 545, Voc: 49.60, Isc: 14.00, Vmp: 41.60, Imp: 13.10, efficiency: 21.1, wafer: 'M10', testLimits: makeTestLimits(49.60, 14.00) },
-  { id: 'htsaae-2', manufacturer: 'HT-SAAE', model: 'HTN580MH-72', technology: 'TOPCon', Pmax: 580, Voc: 51.40, Isc: 14.40, Vmp: 43.20, Imp: 13.43, efficiency: 22.4, wafer: 'M10', testLimits: makeTestLimits(51.40, 14.40) },
-  { id: 'htsaae-3', manufacturer: 'HT-SAAE', model: 'HTM410MH-54', technology: 'PERC', Pmax: 410, Voc: 37.10, Isc: 14.02, Vmp: 31.20, Imp: 13.14, efficiency: 21.0, wafer: 'M10', testLimits: makeTestLimits(37.10, 14.02) },
-  { id: 'htsaae-4', manufacturer: 'HT-SAAE', model: 'HTN445MH-54', technology: 'TOPCon', Pmax: 445, Voc: 38.50, Isc: 14.62, Vmp: 32.50, Imp: 13.69, efficiency: 22.3, wafer: 'M10', testLimits: makeTestLimits(38.50, 14.62) },
-  { id: 'htsaae-5', manufacturer: 'HT-SAAE', model: 'HTN700MH-78', technology: 'TOPCon', Pmax: 700, Voc: 54.80, Isc: 16.42, Vmp: 46.10, Imp: 15.18, efficiency: 22.6, wafer: 'G12', testLimits: makeTestLimits(54.80, 16.42) },
+  // ── REC Group (5 models) ──────────────────────────────────────
+  m('REC Group', 'REC Alpha Pure-R 430', 'HJT', 430, 51.70, 10.50, 43.40, 9.91, 22.3),
+  m('REC Group', 'REC Alpha Pure-R 410', 'HJT', 410, 50.40, 10.28, 42.30, 9.69, 21.9),
+  m('REC Group', 'REC TwinPeak 5-450', 'PERC', 450, 41.80, 13.58, 35.10, 12.82, 21.0),
+  m('REC Group', 'REC Alpha 72 Series-580', 'HJT Bifacial', 580, 53.20, 13.76, 44.60, 13.00, 22.5),
+  m('REC Group', 'REC N-Peak 3-375', 'TOPCon', 375, 40.80, 11.60, 34.20, 10.96, 20.7),
 
-  // ==================== REC Solar ====================
-  { id: 'rec-1', manufacturer: 'REC Solar', model: 'Alpha Pure-R REC430AA', technology: 'HJT', Pmax: 430, Voc: 48.80, Isc: 11.38, Vmp: 40.50, Imp: 10.62, efficiency: 22.3, wafer: 'M10', testLimits: makeTestLimits(48.80, 11.38) },
-  { id: 'rec-2', manufacturer: 'REC Solar', model: 'TwinPeak 5 REC445TP5', technology: 'PERC', Pmax: 445, Voc: 41.90, Isc: 13.60, Vmp: 34.80, Imp: 12.79, efficiency: 21.6, wafer: 'M10', testLimits: makeTestLimits(41.90, 13.60) },
-  { id: 'rec-3', manufacturer: 'REC Solar', model: 'Alpha Pure-R REC470AA', technology: 'HJT', Pmax: 470, Voc: 50.40, Isc: 12.05, Vmp: 42.00, Imp: 11.19, efficiency: 22.6, wafer: 'M10', testLimits: makeTestLimits(50.40, 12.05) },
-  { id: 'rec-4', manufacturer: 'REC Solar', model: 'TwinPeak 4 REC370TP4', technology: 'PERC', Pmax: 370, Voc: 40.70, Isc: 11.55, Vmp: 34.20, Imp: 10.82, efficiency: 20.3, wafer: 'M10', testLimits: makeTestLimits(40.70, 11.55) },
-  { id: 'rec-5', manufacturer: 'REC Solar', model: 'Alpha HJT REC410AA-72', technology: 'HJT', Pmax: 410, Voc: 47.60, Isc: 11.10, Vmp: 39.50, Imp: 10.38, efficiency: 21.7, wafer: 'M10', testLimits: makeTestLimits(47.60, 11.10) },
+  // ── Panasonic HIT (4 models) ──────────────────────────────────
+  m('Panasonic', 'EVPV410H', 'HJT', 410, 50.80, 10.18, 42.60, 9.62, 22.2),
+  m('Panasonic', 'EVPV380H', 'HJT', 380, 49.50, 9.69, 41.50, 9.16, 21.7),
+  m('Panasonic', 'EVPV370H', 'HJT', 370, 48.80, 9.57, 40.90, 9.05, 21.2),
+  m('Panasonic', 'EVPV400HK', 'HJT Bifacial', 400, 50.20, 10.05, 42.10, 9.50, 22.0),
 
-  // ==================== Panasonic / HIT ====================
-  { id: 'pana-1', manufacturer: 'Panasonic', model: 'EverVolt EVPV410H', technology: 'HJT', Pmax: 410, Voc: 48.68, Isc: 10.86, Vmp: 40.20, Imp: 10.20, efficiency: 22.2, wafer: 'M10', testLimits: makeTestLimits(48.68, 10.86) },
-  { id: 'pana-2', manufacturer: 'Panasonic', model: 'EverVolt EVPV380H', technology: 'HJT', Pmax: 380, Voc: 46.80, Isc: 10.48, Vmp: 38.90, Imp: 9.77, efficiency: 21.2, wafer: 'M10', testLimits: makeTestLimits(46.80, 10.48) },
-  { id: 'pana-3', manufacturer: 'Panasonic', model: 'HIT N340 VBHN340SA17', technology: 'HJT', Pmax: 340, Voc: 69.70, Isc: 6.17, Vmp: 59.70, Imp: 5.70, efficiency: 20.3, wafer: 'M6', testLimits: makeTestLimits(69.70, 6.17) },
-  { id: 'pana-4', manufacturer: 'Panasonic', model: 'EverVolt EVPV430H', technology: 'HJT', Pmax: 430, Voc: 50.10, Isc: 11.08, Vmp: 41.50, Imp: 10.36, efficiency: 22.6, wafer: 'M10', testLimits: makeTestLimits(50.10, 11.08) },
-  { id: 'pana-5', manufacturer: 'Panasonic', model: 'HIT N330 VBHN330SA17', technology: 'HJT', Pmax: 330, Voc: 69.10, Isc: 6.08, Vmp: 58.60, Imp: 5.63, efficiency: 19.7, wafer: 'M6', testLimits: makeTestLimits(69.10, 6.08) },
+  // ── SunPower (4 models) ───────────────────────────────────────
+  m('SunPower', 'SPR-M440-H-AC', 'HBC', 440, 51.80, 10.72, 43.50, 10.11, 22.8),
+  m('SunPower', 'SPR-MAX6-430', 'HBC', 430, 51.20, 10.60, 43.00, 10.00, 22.6),
+  m('SunPower', 'SPR-P6-420-UPP', 'PERC', 420, 42.10, 12.60, 35.30, 11.90, 20.4),
+  m('SunPower', 'SPR-MAX3-400', 'HBC', 400, 49.80, 10.14, 41.80, 9.57, 22.1),
 
-  // ==================== SunPower ====================
-  { id: 'sp-1', manufacturer: 'SunPower', model: 'Maxeon 6 SPR-MAX6-440', technology: 'HBC', Pmax: 440, Voc: 48.50, Isc: 11.60, Vmp: 40.20, Imp: 10.95, efficiency: 22.8, wafer: 'M10', testLimits: makeTestLimits(48.50, 11.60) },
-  { id: 'sp-2', manufacturer: 'SunPower', model: 'Maxeon 3 SPR-MAX3-400', technology: 'HBC', Pmax: 400, Voc: 75.60, Isc: 6.65, Vmp: 65.00, Imp: 6.15, efficiency: 22.7, wafer: 'M6', testLimits: makeTestLimits(75.60, 6.65) },
-  { id: 'sp-3', manufacturer: 'SunPower', model: 'Performance P3-375', technology: 'PERC', Pmax: 375, Voc: 40.10, Isc: 12.10, Vmp: 33.50, Imp: 11.19, efficiency: 20.4, wafer: 'M10', testLimits: makeTestLimits(40.10, 12.10) },
-  { id: 'sp-4', manufacturer: 'SunPower', model: 'Maxeon 7 SPR-MAX7-470', technology: 'HBC', Pmax: 470, Voc: 49.80, Isc: 12.12, Vmp: 41.30, Imp: 11.38, efficiency: 24.0, wafer: 'M10', testLimits: makeTestLimits(49.80, 12.12) },
-  { id: 'sp-5', manufacturer: 'SunPower', model: 'Maxeon 5 AC SPR-MAX5-415', technology: 'HBC', Pmax: 415, Voc: 47.20, Isc: 11.32, Vmp: 39.40, Imp: 10.53, efficiency: 22.2, wafer: 'M10', testLimits: makeTestLimits(47.20, 11.32) },
+  // ── Meyer Burger (4 models) ───────────────────────────────────
+  m('Meyer Burger', 'MB-400-HJT-G', 'HJT', 400, 50.20, 10.06, 42.10, 9.50, 21.8),
+  m('Meyer Burger', 'MB-390-HJT-W', 'HJT', 390, 49.60, 9.92, 41.60, 9.38, 21.4),
+  m('Meyer Burger', 'MB-380-HJT-B', 'HJT', 380, 48.90, 9.81, 41.00, 9.27, 21.0),
+  m('Meyer Burger', 'MB-420-HJT-BF', 'HJT Bifacial', 420, 51.30, 10.33, 43.00, 9.77, 22.1),
 
-  // ==================== Meyer Burger ====================
-  { id: 'mb-1', manufacturer: 'Meyer Burger', model: 'White HJT 400W', technology: 'HJT', Pmax: 400, Voc: 48.20, Isc: 10.72, Vmp: 40.50, Imp: 9.88, efficiency: 21.7, wafer: 'M10', testLimits: makeTestLimits(48.20, 10.72) },
-  { id: 'mb-2', manufacturer: 'Meyer Burger', model: 'Glass HJT 380W', technology: 'HJT', Pmax: 380, Voc: 47.60, Isc: 10.32, Vmp: 39.80, Imp: 9.55, efficiency: 21.0, wafer: 'M10', testLimits: makeTestLimits(47.60, 10.32) },
-  { id: 'mb-3', manufacturer: 'Meyer Burger', model: 'White HJT 420W', technology: 'HJT', Pmax: 420, Voc: 49.30, Isc: 11.00, Vmp: 41.20, Imp: 10.19, efficiency: 22.1, wafer: 'M10', testLimits: makeTestLimits(49.30, 11.00) },
-  { id: 'mb-4', manufacturer: 'Meyer Burger', model: 'Black HJT 395W', technology: 'HJT', Pmax: 395, Voc: 47.90, Isc: 10.65, Vmp: 40.20, Imp: 9.83, efficiency: 21.5, wafer: 'M10', testLimits: makeTestLimits(47.90, 10.65) },
-  { id: 'mb-5', manufacturer: 'Meyer Burger', model: 'White HJT 440W', technology: 'HJT', Pmax: 440, Voc: 50.50, Isc: 11.25, Vmp: 42.10, Imp: 10.45, efficiency: 22.5, wafer: 'M10', testLimits: makeTestLimits(50.50, 11.25) },
+  // ── Waaree (5 models) ─────────────────────────────────────────
+  m('Waaree', 'WS-545', 'PERC', 545, 49.40, 13.93, 41.30, 13.20, 21.0),
+  m('Waaree', 'WS-580N', 'TOPCon Bifacial', 580, 50.90, 14.38, 42.70, 13.58, 22.0),
+  m('Waaree', 'WS-410', 'PERC', 410, 37.30, 13.88, 31.20, 13.15, 20.9),
+  m('Waaree', 'WS-620N', 'TOPCon Bifacial', 620, 52.10, 15.02, 43.70, 14.19, 22.5),
+  m('Waaree', 'WS-500', 'PERC', 500, 45.10, 13.99, 37.70, 13.26, 20.7),
 
-  // ==================== Waaree (India) ====================
-  { id: 'waaree-1', manufacturer: 'Waaree', model: 'WS-545 Bifacial', technology: 'PERC', Pmax: 545, Voc: 49.60, Isc: 13.96, Vmp: 41.70, Imp: 13.07, efficiency: 21.1, wafer: 'M10', testLimits: makeTestLimits(49.60, 13.96) },
-  { id: 'waaree-2', manufacturer: 'Waaree', model: 'WS-585N TOPCon', technology: 'TOPCon', Pmax: 585, Voc: 51.80, Isc: 14.45, Vmp: 43.60, Imp: 13.42, efficiency: 22.5, wafer: 'M10', testLimits: makeTestLimits(51.80, 14.45) },
-  { id: 'waaree-3', manufacturer: 'Waaree', model: 'WS-410 Mono', technology: 'PERC', Pmax: 410, Voc: 37.20, Isc: 14.00, Vmp: 31.30, Imp: 13.10, efficiency: 21.0, wafer: 'M10', testLimits: makeTestLimits(37.20, 14.00) },
-  { id: 'waaree-4', manufacturer: 'Waaree', model: 'WS-445N TOPCon', technology: 'TOPCon', Pmax: 445, Voc: 38.40, Isc: 14.65, Vmp: 32.40, Imp: 13.73, efficiency: 22.3, wafer: 'M10', testLimits: makeTestLimits(38.40, 14.65) },
-  { id: 'waaree-5', manufacturer: 'Waaree', model: 'WS-670N G12', technology: 'TOPCon', Pmax: 670, Voc: 47.50, Isc: 18.18, Vmp: 39.90, Imp: 16.79, efficiency: 22.5, wafer: 'G12', testLimits: makeTestLimits(47.50, 18.18) },
+  // ── Adani Solar (5 models) ────────────────────────────────────
+  m('Adani Solar', 'ASP-7-545', 'PERC', 545, 49.55, 13.87, 41.50, 13.13, 21.0),
+  m('Adani Solar', 'ASP-7-580N', 'TOPCon Bifacial', 580, 50.70, 14.44, 42.50, 13.65, 22.1),
+  m('Adani Solar', 'ASP-7-620N', 'TOPCon Bifacial', 620, 51.80, 15.10, 43.50, 14.25, 22.4),
+  m('Adani Solar', 'ASP-7-410', 'PERC', 410, 37.40, 13.83, 31.30, 13.10, 20.8),
+  m('Adani Solar', 'ASP-7-440N', 'TOPCon', 440, 38.70, 14.34, 32.40, 13.58, 22.0),
 
-  // ==================== Adani Solar (India) ====================
-  { id: 'adani-1', manufacturer: 'Adani Solar', model: 'ASP-7-550W Bifacial', technology: 'PERC', Pmax: 550, Voc: 49.80, Isc: 14.05, Vmp: 41.80, Imp: 13.16, efficiency: 21.3, wafer: 'M10', testLimits: makeTestLimits(49.80, 14.05) },
-  { id: 'adani-2', manufacturer: 'Adani Solar', model: 'ASP-7-585N TOPCon', technology: 'TOPCon', Pmax: 585, Voc: 51.70, Isc: 14.48, Vmp: 43.50, Imp: 13.45, efficiency: 22.5, wafer: 'M10', testLimits: makeTestLimits(51.70, 14.48) },
-  { id: 'adani-3', manufacturer: 'Adani Solar', model: 'ASP-7-410W Mono', technology: 'PERC', Pmax: 410, Voc: 37.15, Isc: 14.02, Vmp: 31.25, Imp: 13.12, efficiency: 21.0, wafer: 'M10', testLimits: makeTestLimits(37.15, 14.02) },
-  { id: 'adani-4', manufacturer: 'Adani Solar', model: 'ASP-7-445N TOPCon', technology: 'TOPCon', Pmax: 445, Voc: 38.35, Isc: 14.62, Vmp: 32.35, Imp: 13.76, efficiency: 22.2, wafer: 'M10', testLimits: makeTestLimits(38.35, 14.62) },
-  { id: 'adani-5', manufacturer: 'Adani Solar', model: 'ASP-7-700N G12', technology: 'TOPCon', Pmax: 700, Voc: 49.50, Isc: 18.25, Vmp: 41.70, Imp: 16.79, efficiency: 22.6, wafer: 'G12', testLimits: makeTestLimits(49.50, 18.25) },
+  // ── Vikram Solar (4 models) ───────────────────────────────────
+  m('Vikram Solar', 'SOMERA-545', 'PERC', 545, 49.45, 13.91, 41.40, 13.17, 21.0),
+  m('Vikram Solar', 'PREXOS-580N', 'TOPCon Bifacial', 580, 50.60, 14.47, 42.40, 13.68, 22.0),
+  m('Vikram Solar', 'PREXOS-620N', 'TOPCon Bifacial', 620, 51.90, 15.06, 43.60, 14.22, 22.5),
+  m('Vikram Solar', 'SOMERA-410', 'PERC', 410, 37.10, 13.95, 31.00, 13.23, 21.0),
 
-  // ==================== Vikram Solar (India) ====================
-  { id: 'vikram-1', manufacturer: 'Vikram Solar', model: 'Somera Grand 545', technology: 'PERC', Pmax: 545, Voc: 49.50, Isc: 14.00, Vmp: 41.60, Imp: 13.10, efficiency: 21.1, wafer: 'M10', testLimits: makeTestLimits(49.50, 14.00) },
-  { id: 'vikram-2', manufacturer: 'Vikram Solar', model: 'Prexos 585N', technology: 'TOPCon', Pmax: 585, Voc: 51.60, Isc: 14.50, Vmp: 43.40, Imp: 13.48, efficiency: 22.5, wafer: 'M10', testLimits: makeTestLimits(51.60, 14.50) },
-  { id: 'vikram-3', manufacturer: 'Vikram Solar', model: 'Somera 410', technology: 'PERC', Pmax: 410, Voc: 37.10, Isc: 14.05, Vmp: 31.20, Imp: 13.14, efficiency: 21.0, wafer: 'M10', testLimits: makeTestLimits(37.10, 14.05) },
-  { id: 'vikram-4', manufacturer: 'Vikram Solar', model: 'Prexos 445N', technology: 'TOPCon', Pmax: 445, Voc: 38.30, Isc: 14.68, Vmp: 32.30, Imp: 13.78, efficiency: 22.3, wafer: 'M10', testLimits: makeTestLimits(38.30, 14.68) },
-  { id: 'vikram-5', manufacturer: 'Vikram Solar', model: 'Prexos 680N G12', technology: 'TOPCon', Pmax: 680, Voc: 47.60, Isc: 18.40, Vmp: 40.00, Imp: 17.00, efficiency: 22.6, wafer: 'G12', testLimits: makeTestLimits(47.60, 18.40) },
+  // ── Renewsys (4 models) ───────────────────────────────────────
+  m('Renewsys', 'DESERV-545', 'PERC', 545, 49.35, 13.94, 41.20, 13.22, 20.9),
+  m('Renewsys', 'DESERV-410', 'PERC', 410, 37.00, 13.98, 30.90, 13.27, 20.8),
+  m('Renewsys', 'DESERV-580N', 'TOPCon Bifacial', 580, 50.50, 14.50, 42.30, 13.71, 21.9),
+  m('Renewsys', 'DESERV-500', 'PERC', 500, 45.00, 14.02, 37.60, 13.30, 20.6),
 
-  // ==================== Renewsys (India) ====================
-  { id: 'renewsys-1', manufacturer: 'Renewsys', model: 'DESERV 540 Bifacial', technology: 'PERC', Pmax: 540, Voc: 49.40, Isc: 13.92, Vmp: 41.50, Imp: 13.01, efficiency: 20.9, wafer: 'M10', testLimits: makeTestLimits(49.40, 13.92) },
-  { id: 'renewsys-2', manufacturer: 'Renewsys', model: 'DESERV 580N TOPCon', technology: 'TOPCon', Pmax: 580, Voc: 51.40, Isc: 14.42, Vmp: 43.20, Imp: 13.43, efficiency: 22.3, wafer: 'M10', testLimits: makeTestLimits(51.40, 14.42) },
-  { id: 'renewsys-3', manufacturer: 'Renewsys', model: 'DESERV 405 Mono', technology: 'PERC', Pmax: 405, Voc: 37.00, Isc: 13.90, Vmp: 31.10, Imp: 13.02, efficiency: 20.8, wafer: 'M10', testLimits: makeTestLimits(37.00, 13.90) },
-  { id: 'renewsys-4', manufacturer: 'Renewsys', model: 'DESERV 440N TOPCon', technology: 'TOPCon', Pmax: 440, Voc: 38.10, Isc: 14.58, Vmp: 32.10, Imp: 13.71, efficiency: 22.0, wafer: 'M10', testLimits: makeTestLimits(38.10, 14.58) },
-  { id: 'renewsys-5', manufacturer: 'Renewsys', model: 'DESERV 660N G12', technology: 'TOPCon', Pmax: 660, Voc: 47.20, Isc: 18.00, Vmp: 39.70, Imp: 16.62, efficiency: 22.2, wafer: 'G12', testLimits: makeTestLimits(47.20, 18.00) },
+  // ── Oxford PV (Tandem) (2 models) ─────────────────────────────
+  m('Oxford PV', 'OPV-430-T', 'Perovskite Tandem', 430, 52.80, 10.28, 44.30, 9.71, 26.8),
+  m('Oxford PV', 'OPV-400-T', 'Perovskite Tandem', 400, 51.50, 9.81, 43.20, 9.26, 25.5),
+
+  // ── Avancis (CIGS) (2 models) ─────────────────────────────────
+  m('Avancis', 'PowerMax-175', 'CIGS', 175, 96.50, 2.42, 78.80, 2.22, 17.2),
+  m('Avancis', 'PowerMax-195', 'CIGS', 195, 98.30, 2.65, 80.20, 2.43, 18.0),
 ];
 
-export const MANUFACTURERS = [...new Set(MODULE_DATABASE.map((m) => m.manufacturer))];
-export const TECHNOLOGIES: Technology[] = ['PERC', 'TOPCon', 'HJT', 'HBC', 'Bifacial', 'Monofacial', 'Tandem', 'CIGS', 'CdTe', 'n-type', 'p-type'];
+// Derived lookup helpers
+export const manufacturers = [...new Set(moduleDatabase.map((m) => m.manufacturer))].sort();
+export const technologies = [...new Set(moduleDatabase.map((m) => m.technology))].sort();
+
+export function findModulesByManufacturer(name: string): PVModule[] {
+  return moduleDatabase.filter((m) => m.manufacturer === name);
+}
+
+export function findModulesByTechnology(tech: string): PVModule[] {
+  return moduleDatabase.filter((m) => m.technology === tech);
+}
+
+export function searchModules(query: string): PVModule[] {
+  const q = query.toLowerCase();
+  return moduleDatabase.filter(
+    (m) =>
+      m.manufacturer.toLowerCase().includes(q) ||
+      m.model.toLowerCase().includes(q) ||
+      m.technology.toLowerCase().includes(q)
+  );
+}

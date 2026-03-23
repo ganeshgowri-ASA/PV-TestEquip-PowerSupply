@@ -2,279 +2,172 @@
 
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MODULE_DATABASE, MANUFACTURERS, TECHNOLOGIES, type PVModule, type Technology } from '@/data/moduleDatabase';
+import { Badge } from '@/components/ui/badge';
+import {
+  moduleDatabase,
+  manufacturers,
+  technologies,
+  type PVModule,
+} from '@/data/moduleDatabase';
 
 interface ModuleSelectorProps {
-  selectedModule: PVModule | null;
-  onSelectModule: (mod: PVModule | null) => void;
+  onSelect?: (module: PVModule) => void;
+  selected?: PVModule | null;
 }
 
-export default function ModuleSelector({ selectedModule, onSelectModule }: ModuleSelectorProps) {
+export default function ModuleSelector({ onSelect, selected }: ModuleSelectorProps) {
   const [search, setSearch] = useState('');
-  const [techFilter, setTechFilter] = useState<Technology | 'ALL'>('ALL');
-  const [mfgFilter, setMfgFilter] = useState('ALL');
-  const [wattageRange, setWattageRange] = useState<[number, number]>([400, 750]);
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
-  const [showCustom, setShowCustom] = useState(false);
-  const [customModule, setCustomModule] = useState<PVModule>({
-    id: 'custom-1',
-    manufacturer: '',
-    model: '',
-    technology: 'PERC',
-    Pmax: 0,
-    Voc: 0,
-    Isc: 0,
-    Vmp: 0,
-    Imp: 0,
-    efficiency: 0,
-    wafer: 'M10',
-    testLimits: {
-      tc: { Vmax: 0, Isc_TC: 0 },
-      hf: { Vmax: 0, frequency: 1, Isc_HF: 0 },
-      letid: { Iinject: 0, Voc: 0, cellTemp: 75 },
-      pid: { Vbias: 1000, Imax_leak: 5, duration: 96 },
-    },
-  });
+  const [filterMfr, setFilterMfr] = useState('');
+  const [filterTech, setFilterTech] = useState('');
 
   const filtered = useMemo(() => {
-    return MODULE_DATABASE.filter((m) => {
-      if (search && !m.model.toLowerCase().includes(search.toLowerCase()) && !m.manufacturer.toLowerCase().includes(search.toLowerCase())) return false;
-      if (techFilter !== 'ALL' && m.technology !== techFilter) return false;
-      if (mfgFilter !== 'ALL' && m.manufacturer !== mfgFilter) return false;
-      if (m.Pmax < wattageRange[0] || m.Pmax > wattageRange[1]) return false;
-      return true;
-    });
-  }, [search, techFilter, mfgFilter, wattageRange]);
-
-  const handleCustomSubmit = () => {
-    const m = { ...customModule };
-    m.testLimits = {
-      tc: { Vmax: m.Voc * 1.15, Isc_TC: m.Isc },
-      hf: { Vmax: m.Voc * 1.15, frequency: 1, Isc_HF: m.Isc },
-      letid: { Iinject: m.Isc, Voc: m.Voc, cellTemp: 75 },
-      pid: { Vbias: 1000, Imax_leak: 5, duration: 96 },
-    };
-    onSelectModule(m);
-    setShowCustom(false);
-  };
+    let list = moduleDatabase;
+    if (filterMfr) list = list.filter((m) => m.manufacturer === filterMfr);
+    if (filterTech) list = list.filter((m) => m.technology === filterTech);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (m) =>
+          m.manufacturer.toLowerCase().includes(q) ||
+          m.model.toLowerCase().includes(q) ||
+          m.technology.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [search, filterMfr, filterTech]);
 
   return (
-    <div className="space-y-4">
-      {/* Selected Module Badge */}
-      {selectedModule && (
-        <div className="flex items-center gap-3 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
-          <Badge variant="success">Selected</Badge>
-          <span className="text-sm font-medium text-blue-200">
-            {selectedModule.manufacturer} {selectedModule.model}
-          </span>
-          <Badge variant="outline" className="text-xs">{selectedModule.technology}</Badge>
-          <span className="text-xs text-gray-400">
-            {selectedModule.Pmax}W | Voc={selectedModule.Voc}V | Isc={selectedModule.Isc}A | {selectedModule.efficiency}%
-          </span>
-          <Button size="sm" variant="outline" className="ml-auto h-6 text-xs" onClick={() => onSelectModule(null)}>
-            Clear
-          </Button>
-        </div>
-      )}
-
-      {/* Search & Filters */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">PV Module Database ({MODULE_DATABASE.length} modules)</CardTitle>
-            <div className="flex gap-2">
-              <button onClick={() => setViewMode('table')} className={`px-2 py-1 rounded text-xs ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>Table</button>
-              <button onClick={() => setViewMode('card')} className={`px-2 py-1 rounded text-xs ${viewMode === 'card' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>Cards</button>
-              <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => setShowCustom(!showCustom)}>
-                {showCustom ? 'Hide Custom' : '+ Custom Module'}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Search Bar */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">PV Module Selector</CardTitle>
+        <p className="text-xs text-gray-400">
+          {moduleDatabase.length} modules from {manufacturers.length} manufacturers
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Input
-            placeholder="Search by manufacturer or model..."
+            placeholder="Search model, manufacturer..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="text-sm"
           />
+          <select
+            className="flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={filterMfr}
+            onChange={(e) => setFilterMfr(e.target.value)}
+          >
+            <option value="">All Manufacturers</option>
+            {manufacturers.map((mfr) => (
+              <option key={mfr} value={mfr}>
+                {mfr}
+              </option>
+            ))}
+          </select>
+          <select
+            className="flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={filterTech}
+            onChange={(e) => setFilterTech(e.target.value)}
+          >
+            <option value="">All Technologies</option>
+            {technologies.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {/* Filters */}
-          <div className="flex gap-3 flex-wrap">
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Technology</label>
-              <select value={techFilter} onChange={(e) => setTechFilter(e.target.value as Technology | 'ALL')}
-                className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white">
-                <option value="ALL">All Technologies</option>
-                {TECHNOLOGIES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+        {/* Results count */}
+        <p className="text-xs text-gray-500">{filtered.length} modules found</p>
+
+        {/* Module list */}
+        <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+          {filtered.map((mod) => {
+            const isSelected =
+              selected?.manufacturer === mod.manufacturer &&
+              selected?.model === mod.model;
+            return (
+              <button
+                key={`${mod.manufacturer}-${mod.model}`}
+                onClick={() => onSelect?.(mod)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  isSelected
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-500'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-100 truncate">
+                      {mod.manufacturer} — {mod.model}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {mod.Pmax}W | Voc {mod.Voc}V | Isc {mod.Isc}A | {mod.efficiency}%
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                    {mod.technology}
+                  </Badge>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected module detail */}
+        {selected && (
+          <div className="mt-4 p-4 rounded-lg border border-blue-500/30 bg-blue-500/5">
+            <h4 className="text-sm font-semibold text-blue-300 mb-3">
+              Selected: {selected.manufacturer} {selected.model}
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+              {[
+                { label: 'Pmax', value: `${selected.Pmax}W` },
+                { label: 'Voc', value: `${selected.Voc}V` },
+                { label: 'Isc', value: `${selected.Isc}A` },
+                { label: 'Vmp', value: `${selected.Vmp}V` },
+                { label: 'Imp', value: `${selected.Imp}A` },
+                { label: 'Efficiency', value: `${selected.efficiency}%` },
+                { label: 'Technology', value: selected.technology },
+                { label: 'TC Vmax', value: `${selected.testLimits.tc.Vmax}V` },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">{label}</p>
+                  <p className="text-sm font-semibold text-blue-200 mt-0.5">{value}</p>
+                </div>
+              ))}
             </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Manufacturer</label>
-              <select value={mfgFilter} onChange={(e) => setMfgFilter(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white">
-                <option value="ALL">All Manufacturers</option>
-                {MANUFACTURERS.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Min Wattage</label>
-              <Input type="number" value={wattageRange[0]} onChange={(e) => setWattageRange([Number(e.target.value), wattageRange[1]])}
-                className="w-20 h-7 text-xs" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Max Wattage</label>
-              <Input type="number" value={wattageRange[1]} onChange={(e) => setWattageRange([wattageRange[0], Number(e.target.value)])}
-                className="w-20 h-7 text-xs" />
-            </div>
-            <div className="flex items-end">
-              <span className="text-xs text-gray-500 mb-1">{filtered.length} results</span>
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="text-xs p-2 rounded bg-gray-800">
+                <span className="text-gray-500">TC:</span>{' '}
+                <span className="text-gray-300">
+                  {selected.testLimits.tc.Vmax}V / {selected.testLimits.tc.Isc}A
+                </span>
+              </div>
+              <div className="text-xs p-2 rounded bg-gray-800">
+                <span className="text-gray-500">HF:</span>{' '}
+                <span className="text-gray-300">
+                  {selected.testLimits.hf.Vmax}V / {selected.testLimits.hf.freq} cyc
+                </span>
+              </div>
+              <div className="text-xs p-2 rounded bg-gray-800">
+                <span className="text-gray-500">LETID:</span>{' '}
+                <span className="text-gray-300">
+                  {selected.testLimits.letid.Iinject}A / {selected.testLimits.letid.cellTemp}C
+                </span>
+              </div>
+              <div className="text-xs p-2 rounded bg-gray-800">
+                <span className="text-gray-500">PID:</span>{' '}
+                <span className="text-gray-300">
+                  {selected.testLimits.pid.Vbias}V / {selected.testLimits.pid.duration}h
+                </span>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Custom Module Form */}
-      {showCustom && (
-        <Card className="border-yellow-700">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-yellow-400">Custom Module Entry</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Manufacturer</label>
-                <Input value={customModule.manufacturer} onChange={(e) => setCustomModule({ ...customModule, manufacturer: e.target.value })} className="h-7 text-xs" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Model</label>
-                <Input value={customModule.model} onChange={(e) => setCustomModule({ ...customModule, model: e.target.value })} className="h-7 text-xs" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Technology</label>
-                <select value={customModule.technology} onChange={(e) => setCustomModule({ ...customModule, technology: e.target.value as Technology })}
-                  className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white w-full h-7">
-                  {TECHNOLOGIES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Pmax (W)</label>
-                <Input type="number" value={customModule.Pmax || ''} onChange={(e) => setCustomModule({ ...customModule, Pmax: Number(e.target.value) })} className="h-7 text-xs" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Voc (V)</label>
-                <Input type="number" value={customModule.Voc || ''} onChange={(e) => setCustomModule({ ...customModule, Voc: Number(e.target.value) })} className="h-7 text-xs" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Isc (A)</label>
-                <Input type="number" value={customModule.Isc || ''} onChange={(e) => setCustomModule({ ...customModule, Isc: Number(e.target.value) })} className="h-7 text-xs" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Vmp (V)</label>
-                <Input type="number" value={customModule.Vmp || ''} onChange={(e) => setCustomModule({ ...customModule, Vmp: Number(e.target.value) })} className="h-7 text-xs" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Imp (A)</label>
-                <Input type="number" value={customModule.Imp || ''} onChange={(e) => setCustomModule({ ...customModule, Imp: Number(e.target.value) })} className="h-7 text-xs" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Efficiency (%)</label>
-                <Input type="number" value={customModule.efficiency || ''} onChange={(e) => setCustomModule({ ...customModule, efficiency: Number(e.target.value) })} className="h-7 text-xs" />
-              </div>
-            </div>
-            <Button size="sm" onClick={handleCustomSubmit}>Use Custom Module</Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Module Results */}
-      {viewMode === 'table' ? (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-gray-900 z-10">
-                  <tr className="border-b border-gray-700 text-xs text-gray-500 uppercase tracking-wider">
-                    <th className="text-left p-2">Manufacturer</th>
-                    <th className="text-left p-2">Model</th>
-                    <th className="text-center p-2">Tech</th>
-                    <th className="text-center p-2">Pmax</th>
-                    <th className="text-center p-2">Voc</th>
-                    <th className="text-center p-2">Isc</th>
-                    <th className="text-center p-2">Eff%</th>
-                    <th className="text-center p-2">Wafer</th>
-                    <th className="text-center p-2">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((m) => (
-                    <tr key={m.id}
-                      className={`border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer ${selectedModule?.id === m.id ? 'bg-blue-900/20' : ''}`}
-                      onClick={() => onSelectModule(m)}
-                    >
-                      <td className="p-2 text-xs text-gray-300">{m.manufacturer}</td>
-                      <td className="p-2 text-xs text-blue-300 font-mono">{m.model}</td>
-                      <td className="p-2 text-center"><Badge variant="outline" className="text-xs">{m.technology}</Badge></td>
-                      <td className="p-2 text-center text-xs font-mono">{m.Pmax}W</td>
-                      <td className="p-2 text-center text-xs font-mono">{m.Voc}V</td>
-                      <td className="p-2 text-center text-xs font-mono">{m.Isc}A</td>
-                      <td className="p-2 text-center text-xs font-mono">{m.efficiency}%</td>
-                      <td className="p-2 text-center text-xs text-gray-400">{m.wafer}</td>
-                      <td className="p-2 text-center">
-                        <Button size="sm" variant={selectedModule?.id === m.id ? 'default' : 'outline'} className="h-6 px-2 text-xs"
-                          onClick={(e) => { e.stopPropagation(); onSelectModule(m); }}>
-                          {selectedModule?.id === m.id ? 'Selected' : 'Select'}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
-          {filtered.map((m) => (
-            <Card key={m.id}
-              className={`cursor-pointer transition-colors ${selectedModule?.id === m.id ? 'border-blue-500 bg-blue-900/10' : 'hover:border-gray-600'}`}
-              onClick={() => onSelectModule(m)}
-            >
-              <CardContent className="pt-4 pb-3 space-y-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-gray-500">{m.manufacturer}</p>
-                    <p className="text-sm font-medium text-blue-300">{m.model}</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">{m.technology}</Badge>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-xs text-gray-500">Pmax</p>
-                    <p className="text-sm font-mono font-semibold">{m.Pmax}W</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Voc</p>
-                    <p className="text-sm font-mono">{m.Voc}V</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Isc</p>
-                    <p className="text-sm font-mono">{m.Isc}A</p>
-                  </div>
-                </div>
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>{m.efficiency}% eff.</span>
-                  <span>{m.wafer}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -3,19 +3,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import ModuleSelector from './ModuleSelector';
+import ModuleSelector from '@/components/ModuleSelector';
 import type { PVModule } from '@/data/moduleDatabase';
-
-const TECH_CARDS = [
-  { tech: 'PERC', desc: 'Passivated Emitter Rear Cell', type: 'p-type', icon: 'P' },
-  { tech: 'TOPCon', desc: 'Tunnel Oxide Passivated Contact', type: 'n-type', icon: 'T' },
-  { tech: 'HJT', desc: 'Heterojunction Technology', type: 'n-type', icon: 'H' },
-  { tech: 'HBC', desc: 'Heterojunction Back Contact', type: 'n-type', icon: 'B' },
-  { tech: 'Bifacial', desc: 'Double-sided light capture', type: 'dual', icon: 'Bf' },
-  { tech: 'Tandem', desc: 'Perovskite/Si Tandem', type: 'n-type', icon: 'Tn' },
-  { tech: 'CdTe', desc: 'Cadmium Telluride Thin Film', type: 'thin-film', icon: 'Cd' },
-  { tech: 'CIGS', desc: 'Copper Indium Gallium Selenide', type: 'thin-film', icon: 'CI' },
-];
 
 const KPI_CARDS = [
   {
@@ -85,6 +74,24 @@ export default function KPIDashboard({ selectedModule, onSelectModule }: KPIDash
     'Modbus RTU/TCP \u2014 All Power Supplies',
   ];
 
+export default function KPIDashboard() {
+  const [selectedModule, setSelectedModule] = useState<PVModule | null>(null);
+
+  const moduleSpecs = selectedModule
+    ? [
+        { label: 'Technology', value: selectedModule.technology },
+        { label: 'Voc', value: `${selectedModule.Voc}V` },
+        { label: 'Isc', value: `${selectedModule.Isc}A` },
+        { label: 'Pmax', value: `${selectedModule.Pmax}W` },
+        { label: 'Efficiency', value: `${selectedModule.efficiency}%` },
+        { label: 'Standard', value: 'IEC 61215:2021' },
+      ]
+    : MODULE_SPECS;
+
+  const moduleTitle = selectedModule
+    ? `Target Module — ${selectedModule.manufacturer} ${selectedModule.model}`
+    : 'Target Module — HJT Bifacial';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -132,19 +139,13 @@ export default function KPIDashboard({ selectedModule, onSelectModule }: KPIDash
         ))}
       </div>
 
+      {/* Module Selector */}
+      <ModuleSelector onSelect={setSelectedModule} selected={selectedModule} />
+
       {/* Module Specs */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <CardTitle className="text-base">
-              {selectedModule
-                ? `Target Module \u2014 ${selectedModule.manufacturer} ${selectedModule.model}`
-                : 'Target Module \u2014 No Module Selected'}
-            </CardTitle>
-            {selectedModule && (
-              <Badge variant="outline" className="text-xs">{selectedModule.technology}</Badge>
-            )}
-          </div>
+          <CardTitle className="text-base">{moduleTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
