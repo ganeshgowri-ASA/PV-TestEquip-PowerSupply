@@ -9,6 +9,7 @@ import SkillExport from './SkillExport';
 import DesignDrawing from './DesignDrawing';
 import Simulator from './Simulator';
 import { ToastProvider } from './Toast';
+import type { PVModule } from '@/data/moduleDatabase';
 
 const TABS = [
   { id: 'kpi', label: 'KPI Dashboard', icon: 'D' },
@@ -23,12 +24,8 @@ const TABS = [
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('kpi');
-  const [toasts, setToasts] = useState<{id:number;msg:string;type:string}[]>([]);
-  const addToast = (msg:string, type='success') => {
-    const id = Date.now();
-    setToasts(p=>[...p,{id,msg,type}]);
-    setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3000);
-  };
+  const [selectedModule, setSelectedModule] = useState<PVModule | null>(null);
+
   return (
     <ToastProvider>
       <div className="min-h-screen bg-gray-950 text-white">
@@ -37,7 +34,10 @@ export default function Dashboard() {
           <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">PV TestEquip Power Supply Dashboard</h1>
-              <p className="text-blue-300 text-sm mt-1">TC / HF / LETID / PID — IEC 61215:2021 | IEC 62804 | HJT Bifacial</p>
+              <p className="text-blue-300 text-sm mt-1">
+                TC / HF / LETID / PID {'\u2014'} IEC 61215:2021 | IEC 62804
+                {selectedModule ? ` | ${selectedModule.manufacturer} ${selectedModule.model} (${selectedModule.technology})` : ' | Select Module'}
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-blue-400">Antaryami Solar Analytics</p>
@@ -68,10 +68,10 @@ export default function Dashboard() {
 
         {/* Content */}
         <main className="max-w-screen-2xl mx-auto p-6">
-          {activeTab === 'kpi' && <KPIDashboard />}
+          {activeTab === 'kpi' && <KPIDashboard selectedModule={selectedModule} onSelectModule={setSelectedModule} />}
           {activeTab === 'design' && <DesignDrawing />}
-          {activeTab === 'ps-control' && <PowerSupplyControl />}
-          {activeTab === 'recipe' && <RecipeManager />}
+          {activeTab === 'ps-control' && <PowerSupplyControl selectedModule={selectedModule} />}
+          {activeTab === 'recipe' && <RecipeManager selectedModule={selectedModule} />}
           {activeTab === 'simulator' && <Simulator />}
           {activeTab === 'nexar' && <NexarSearch />}
           {activeTab === 'bom' && <BOMManager />}
