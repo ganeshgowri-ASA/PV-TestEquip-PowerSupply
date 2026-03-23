@@ -41,3 +41,19 @@ See agents.md for full folder map and session orchestration.
 - Regenerative mode preferred for TC/HF (green initiative)
 - All outputs exportable: PDF, PNG, CSV, Excel, STEP, DXF
 - Company: Antaryami Solar Analytics
+
+## Component Sourcing Marketplace APIs
+- Nexar/Octopart: https://api.nexar.com/graphql (primary - key in .env)
+- Mouser API: https://api.mouser.com/api/v2 (register at mouser.com/api-hub)
+- Digi-Key API: https://api.digikey.com/products/v4 (register at developer.digikey.com)
+- Element14/Farnell API: https://api.element14.com (register at partner.element14.com)
+- TME API: https://developers.tme.eu/en/ (European + India shipping)
+- Sourcengine API: https://sourcengine.com (3500+ suppliers aggregator)
+- Indian Vendors: Moglix (B2B), Evelta, Sunrom, Robocraze, SP Robotics
+
+## Environment Variables Required
+- NEXAR_API_KEY (provided)
+- MOUSER_API_KEY (register at mouser.com/api-hub)
+- DIGIKEY_CLIENT_ID + DIGIKEY_CLIENT_SECRET (register at developer.digikey.com)
+- ELEMENT14_API_KEY (register at partner.element14.com)
+- TME_API_KEY + TME_API_SECRET (register at developers.tme.eu)
