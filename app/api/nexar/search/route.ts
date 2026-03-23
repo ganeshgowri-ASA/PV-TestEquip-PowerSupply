@@ -1,25 +1,151 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createNexarClient } from '@/lib/nexar-client';
+import {
+  createNexarClient,
+  DEFAULT_USD_TO_INR,
+  type NexarPart,
+  type NexarSearchResult,
+} from '@/lib/nexar-client';
+
+// ─── Request / Response Types ─────────────────────────────────────────────────
+
+interface SearchRequestBody {
+  /** MPN string, keyword, or description */
+  query: string;
+  /** 'mpn' = exact/partial MPN search (default), 'keyword' = general search */
+  type?: 'mpn' | 'keyword';
+  /** Max results to return (default: 10) */
+  limit?: number;
+  /** USD → INR conversion rate (default: 83.5) */
+  usdToInrRate?: number;
+}
+
+interface SellerSummary {
+  name: string;
+  homepageUrl?: string;
+  isIndian: boolean;
+  shipsToIndia: boolean;
+  stock: number;
+  moq: number;
+  lowestPriceUSD: number | null;
+  lowestPriceINR: number | null;
+  leadDays: number | null;
+  prices: { quantity: number; priceUSD: number; priceINR: number }[];
+}
+
+interface PartSummary {
+  mpn: string;
+  name: string;
+  manufacturer: string;
+  manufacturerUrl?: string;
+  category: string | null;
+  datasheetUrl: string | null;
+  totalStock: number;
+  lowestPriceUSD: number | null;
+  lowestPriceINR: number | null;
+  medianPrice1000USD: number | null;
+  medianPrice1000INR: number | null;
+  shortestLeadDays: number | null;
+  sellers: SellerSummary[];
+  indianSellers: string[];
+  indiaAccessibleSellers: string[];
+  specs: { name: string; value: string }[];
+}
+
+interface SearchResponse {
+  hits: number;
+  query: string;
+  type: string;
+  usdToInrRate: number;
+  results: PartSummary[];
+}
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
+
+function formatPart(part: NexarPart): PartSummary {
+  const sellers: SellerSummary[] = part.sellers.map((s) => ({
+    name: s.company.name,
+    homepageUrl: s.company.homepageUrl,
+    isIndian: s.company.isIndian,
+    shipsToIndia: s.company.shipsToIndia,
+    stock: s.offers.reduce((sum, o) => sum + o.inventoryLevel, 0),
+    moq: s.offers[0]?.moq ?? 1,
+    lowestPriceUSD: s.offers[0]?.lowestPriceUSD ?? null,
+    lowestPriceINR: s.offers[0]?.lowestPriceINR ?? null,
+    leadDays: s.offers[0]?.factoryLeadDays ?? null,
+    prices: (s.offers[0]?.prices ?? []).map((p) => ({
+      quantity: p.quantity,
+      priceUSD: p.price,
+      priceINR: p.priceINR,
+    })),
+  }));
+
+  return {
+    mpn: part.mpn,
+    name: part.name,
+    manufacturer: part.manufacturer.name,
+    manufacturerUrl: part.manufacturer.homepageUrl,
+    category: part.category?.name ?? null,
+    datasheetUrl: part.bestDatasheetUrl,
+    totalStock: part.totalStock,
+    lowestPriceUSD: part.lowestPriceUSD,
+    lowestPriceINR: part.lowestPriceINR,
+    medianPrice1000USD: part.medianPrice1000?.price ?? null,
+    medianPrice1000INR: part.medianPrice1000INR,
+    shortestLeadDays: part.shortestLeadDays,
+    sellers,
+    indianSellers: part.indianSellers.map((s) => s.company.name),
+    indiaAccessibleSellers: part.indiaAccessibleSellers.map((s) => s.company.name),
+    specs: part.specs.map((s) => ({
+      name: s.attribute.name,
+      value: s.displayValue,
+    })),
+  };
+}
+
+// ─── Route Handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
-    const { query, type = 'mpn', limit = 10 } = await req.json();
-    const token = process.env.NEXAR_API_TOKEN;
-    if (!token) return NextResponse.json({ error: 'Nexar API token not configured' }, { status: 500 });
-    const client = createNexarClient(token);
-    let result;
-    if (type === 'mpn') {
-      result = await client.searchByMPN(query, limit);
-    } else if (type === 'general') {
-      result = await client.searchParts(query, limit);
-    } else if (type === 'alternatives') {
-      result = await client.getAlternatives(query, limit);
-    } else {
-      return NextResponse.json({ error: 'Invalid search type' }, { status: 400 });
+    const body: SearchRequestBody = await req.json();
+    const { query, type = 'mpn', limit = 10, usdToInrRate = DEFAULT_USD_TO_INR } = body;
+
+    if (!query || typeof query !== 'string' || query.trim() === '') {
+      return NextResponse.json(
+        { error: 'Missing or empty "query" field in request body' },
+        { status: 400 },
+      );
     }
-    return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Nexar API Error:', error);
-    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 });
+
+    const apiKey = process.env.NEXAR_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'NEXAR_API_KEY environment variable is not configured' },
+        { status: 500 },
+      );
+    }
+
+    const nexar = createNexarClient(apiKey, usdToInrRate);
+
+    let rawResult: NexarSearchResult;
+    if (type === 'keyword') {
+      rawResult = await nexar.searchParts(query.trim(), limit);
+    } else {
+      rawResult = await nexar.searchByMPN(query.trim(), limit);
+    }
+
+    const response: SearchResponse = {
+      hits: rawResult.hits,
+      query: query.trim(),
+      type,
+      usdToInrRate,
+      results: rawResult.results.map((r) => formatPart(r.part)),
+    };
+
+    return NextResponse.json(response);
+  } catch (error: unknown) {
+    console.error('[nexar/search] Error:', error);
+    const message =
+      error instanceof Error ? error.message : 'Unknown error occurred';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

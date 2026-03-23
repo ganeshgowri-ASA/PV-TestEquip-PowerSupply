@@ -1,0 +1,148 @@
+{
+  "$schema": "pv-test-recipe-v1",
+  "recipe_type": "pid",
+  "name": "Potential Induced Degradation Test Recipe",
+  "standard": "IEC TS 62804-1:2025",
+  "company": "Antaryami Solar Analytics",
+  "version": "1.0.0",
+
+  "test_conditions": {
+    "temperature": {
+      "setpoint_C": 85,
+      "tolerance_C": 2,
+      "source": "climate_chamber"
+    },
+    "humidity": {
+      "setpoint_rh": 85,
+      "tolerance_rh": 5,
+      "unit": "%RH"
+    },
+    "duration_hours": 96,
+    "measurement_intervals_hours": [0, 24, 48, 72, 96],
+    "environment_note": "85°C/85%RH (damp heat conditions)"
+  },
+
+  "voltage_stress": {
+    "system_voltage_V": -1000,
+    "applied_between": "frame_ground and shorted_cell_string",
+    "polarity_note": "Negative bias on cells relative to frame (most aggressive for p-type)",
+    "voltage_tolerance": "±5%",
+    "alternative_voltages_V": [-600, -1000, -1500],
+    "voltage_selection_note": "Match to module's maximum system voltage rating",
+    "ramp_rate_V_per_s": 100,
+    "ramp_note": "Gradual ramp-up to prevent arc discharge"
+  },
+
+  "pid_test_variants": {
+    "pid_s": {
+      "name": "PID of the shunting type",
+      "description": "Shunting of cell p-n junction by Na+ ion migration",
+      "primary_for": ["p-type PERC", "p-type multi-Si"],
+      "detection": "Pmax drop, shunt resistance decrease, EL dark spots"
+    },
+    "pid_p": {
+      "name": "PID of the polarization type",
+      "description": "Surface charge accumulation in passivation layers",
+      "primary_for": ["n-type HJT", "n-type TOPCon"],
+      "detection": "Reversible Pmax loss, recoverable at room temperature",
+      "recovery_test_hours": 24,
+      "recovery_condition": "Short-circuit at room temperature"
+    },
+    "pid_d": {
+      "name": "PID of the dissolution type",
+      "description": "Electrochemical corrosion of metallization or TCO",
+      "primary_for": ["Thin-film CdTe", "HJT with TCO"],
+      "detection": "Irreversible, visible corrosion, resistance increase"
+    }
+  },
+
+  "power_supply_requirements": {
+    "voltage_range_V": [0, 4000],
+    "voltage_polarity": "bipolar (±4000V)",
+    "current_range": {
+      "measurement_range_nA": [1, 10000000],
+      "leakage_trip_mA": 5,
+      "normal_operating_uA": [0.1, 100]
+    },
+    "power_per_channel_W": 40,
+    "channels": 10,
+    "total_power_kW": 0.4,
+    "topology": "cockcroft_walton_multiplier",
+    "bidirectional": false,
+    "voltage_sensing": "HV_divider_probe",
+    "current_sensing": "electrometer_grade_nA",
+    "regulation_accuracy": "±1%",
+    "communication": ["Modbus RTU", "Modbus TCP"],
+    "safety": {
+      "leakage_trip_mA": 5,
+      "hv_discharge_time_s": 5,
+      "hv_bleeder_resistor": true,
+      "hv_interlock_chain": true,
+      "creepage_mm": 40,
+      "clearance_mm": 25,
+      "isolation_voltage_V": 6000,
+      "emergency_stop": true,
+      "ground_fault_mA": 5,
+      "arc_detection": true,
+      "hv_warning_indicators": ["LED", "buzzer"],
+      "door_interlock": true,
+      "cover_interlock": true,
+      "hv_enable_key_switch": true
+    }
+  },
+
+  "measurement_requirements": {
+    "voltage_accuracy": "±0.5%",
+    "current_accuracy": "±1% or ±1nA (whichever is greater)",
+    "leakage_current_logging": true,
+    "leakage_log_interval_s": 60,
+    "temperature_sensors": [
+      "module_rear_surface",
+      "chamber_air",
+      "ambient"
+    ],
+    "humidity_sensor": true,
+    "sampling_rate_hz": 0.1,
+    "data_format": ["csv", "json"],
+    "log_fields": [
+      "timestamp",
+      "channel_id",
+      "applied_voltage_V",
+      "leakage_current_uA",
+      "module_temp_C",
+      "chamber_temp_C",
+      "chamber_rh_percent",
+      "elapsed_hours",
+      "alarm_status"
+    ]
+  },
+
+  "flash_test_protocol": {
+    "at_each_interval": true,
+    "conditions": "STC (1000 W/m², 25°C, AM1.5G)",
+    "parameters_measured": ["Pmax", "Isc", "Voc", "FF", "Impp", "Vmpp", "Rsh"],
+    "cool_down_before_flash": true,
+    "cool_down_target_C": 25,
+    "repeat_measurements": 3,
+    "el_imaging_at_intervals": true,
+    "el_note": "EL imaging at 0h and 96h minimum to visualize PID-affected cells"
+  },
+
+  "recovery_test": {
+    "enabled": true,
+    "method": "short_circuit_at_room_temp",
+    "duration_hours": 24,
+    "temperature_C": 25,
+    "flash_test_after_recovery": true,
+    "note": "Recovery indicates PID-p (reversible) vs PID-s/d (irreversible)"
+  },
+
+  "pass_fail_criteria": {
+    "max_pmax_degradation_percent": 5,
+    "max_isc_degradation_percent": 5,
+    "visual_inspection": "No delamination, discoloration, or corrosion",
+    "insulation_test_post": true,
+    "wet_leakage_post": true,
+    "el_comparison": "No new inactive cell areas >10% of cell area"
+  }
+}

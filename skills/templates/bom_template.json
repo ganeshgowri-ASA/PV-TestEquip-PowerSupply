@@ -1,0 +1,228 @@
+{
+  "$schema": "pv-bom-template-v1",
+  "version": "1.0.0",
+  "company": "Antaryami Solar Analytics",
+
+  "bom_metadata": {
+    "project_name": "",
+    "equipment_type": "",
+    "test_standard": "",
+    "module_profile": "",
+    "channels": 10,
+    "revision": "A",
+    "date_created": "",
+    "created_by": "",
+    "currency": "USD",
+    "currency_alt": "INR"
+  },
+
+  "line_item_schema": {
+    "item_number": { "type": "integer" },
+    "reference": { "type": "string", "description": "Schematic reference designator" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "power_semiconductor",
+        "passive_component",
+        "magnetic",
+        "capacitor",
+        "connector",
+        "ic_analog",
+        "ic_digital",
+        "ic_power",
+        "sensor",
+        "relay_contactor",
+        "fuse_breaker",
+        "heatsink_thermal",
+        "mechanical",
+        "pcb",
+        "cable_wire",
+        "enclosure",
+        "display_hmi",
+        "communication",
+        "safety",
+        "miscellaneous"
+      ]
+    },
+    "description": { "type": "string" },
+    "mpn": { "type": "string", "description": "Manufacturer Part Number" },
+    "manufacturer": { "type": "string" },
+    "specifications": { "type": "string", "description": "Key specs (voltage, current, power, etc.)" },
+    "quantity": { "type": "integer" },
+    "unit": { "type": "string", "default": "pcs" },
+    "footprint_package": { "type": "string" },
+    "unit_price_usd": { "type": "number" },
+    "extended_price_usd": { "type": "number" },
+    "primary_vendor": { "type": "string" },
+    "primary_vendor_url": { "type": "string" },
+    "indian_vendor": { "type": "string" },
+    "indian_vendor_url": { "type": "string" },
+    "indian_price_inr": { "type": "number" },
+    "lead_time_weeks": { "type": "number" },
+    "lead_time_flag": {
+      "type": "string",
+      "enum": ["in_stock", "short_lead", "long_lead", "critical"],
+      "description": "in_stock: <1wk, short_lead: 1-4wk, long_lead: 4-12wk, critical: >12wk"
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "mpn": "string",
+        "manufacturer": "string",
+        "notes": "string"
+      }
+    },
+    "notes": { "type": "string" }
+  },
+
+  "bom_sections": {
+    "tc_hf_power_supply": {
+      "name": "TC/HF Bidirectional Regenerative Power Supply",
+      "subsections": [
+        {
+          "name": "Power Stage",
+          "typical_components": [
+            "GaN/SiC MOSFETs (full-bridge)",
+            "Gate drivers (isolated)",
+            "Resonant inductor",
+            "Resonant capacitor",
+            "HF transformer",
+            "Output filter inductor",
+            "Output filter capacitors (electrolytic + ceramic)",
+            "Input EMI filter",
+            "Bulk DC bus capacitors"
+          ]
+        },
+        {
+          "name": "Control & Sensing",
+          "typical_components": [
+            "DSP/MCU (TMS320 or STM32)",
+            "Isolated voltage sense (AMC1311)",
+            "Current sense (hall-effect or shunt + INA240)",
+            "Gate driver ICs (UCC21520 or Si8271)",
+            "Op-amps for signal conditioning",
+            "ADC (16-bit minimum)",
+            "DAC (for reference generation)",
+            "Voltage reference (precision)"
+          ]
+        },
+        {
+          "name": "Communication & Interface",
+          "typical_components": [
+            "RS-485 transceiver (MAX485)",
+            "Ethernet PHY (W5500 or LAN8720)",
+            "Modbus RTU/TCP stack (firmware)",
+            "OLED/LCD display module",
+            "Rotary encoder",
+            "Status LEDs",
+            "Front panel connectors"
+          ]
+        },
+        {
+          "name": "Safety & Protection",
+          "typical_components": [
+            "OVP comparator + crowbar SCR",
+            "NTC thermistors (heatsink, transformer)",
+            "Fuses (input, output per channel)",
+            "Emergency stop switch (latching)",
+            "Relay contactors (per channel)",
+            "Ground fault sensor",
+            "Interlock connector chain"
+          ]
+        },
+        {
+          "name": "Mechanical & Thermal",
+          "typical_components": [
+            "19-inch rack enclosure (3U–6U)",
+            "Heatsinks (forced air or liquid)",
+            "Fans (DC brushless, PWM controlled)",
+            "DIN rail for control PCBs",
+            "Terminal blocks (power & signal)",
+            "Cable glands and strain reliefs"
+          ]
+        }
+      ]
+    },
+
+    "letid_power_supply": {
+      "name": "LETID Precision Power Supply",
+      "subsections": [
+        {
+          "name": "Power Stage",
+          "typical_components": [
+            "Linear regulator pass transistors (MOSFET)",
+            "Pre-regulator switching stage",
+            "Output filter (LC, low noise)",
+            "Precision shunt resistors (4-terminal)"
+          ]
+        },
+        {
+          "name": "Precision Control",
+          "typical_components": [
+            "16-bit DAC (DAC8562 or AD5662)",
+            "18-bit ADC (ADS1263 or LTC2380)",
+            "Precision voltage reference (REF5050)",
+            "Low-noise op-amps (OPA2187 or AD8676)",
+            "Current sense amplifier (INA226)",
+            "MCU (STM32G4 or similar)"
+          ]
+        }
+      ]
+    },
+
+    "pid_power_supply": {
+      "name": "PID High Voltage Power Supply",
+      "subsections": [
+        {
+          "name": "HV Generation",
+          "typical_components": [
+            "HV MOSFET/IGBT for resonant drive",
+            "HV transformer (custom wound, >6kV isolation)",
+            "Cockcroft-Walton multiplier diodes (UF4007 or equivalent)",
+            "HV capacitors (ceramic, rated >5kV)",
+            "HV bleeder resistors (safety discharge)",
+            "HV relay (for polarity switching)"
+          ]
+        },
+        {
+          "name": "nA-Precision Measurement",
+          "typical_components": [
+            "Electrometer-grade op-amp (AD549 or LMC6001)",
+            "Guard ring PCB layout",
+            "Teflon standoffs for leakage prevention",
+            "Precision feedback resistors (1GΩ range)",
+            "24-bit ADC (ADS1256)",
+            "Shielded measurement chamber"
+          ]
+        },
+        {
+          "name": "HV Safety",
+          "typical_components": [
+            "HV probe divider (1000:1)",
+            "Arc detection circuit",
+            "5mA leakage trip comparator",
+            "HV interlock connector",
+            "HV warning LEDs and buzzer",
+            "Key switch for HV enable",
+            "Discharge relay with bleeder"
+          ]
+        }
+      ]
+    }
+  },
+
+  "vendor_sourcing_priority": [
+    { "rank": 1, "vendor": "Nexar/Octopart", "type": "aggregator", "api": "GraphQL" },
+    { "rank": 2, "vendor": "Mouser", "type": "distributor", "region": "global" },
+    { "rank": 3, "vendor": "Digi-Key", "type": "distributor", "region": "global" },
+    { "rank": 4, "vendor": "Element14/Farnell", "type": "distributor", "region": "global+India" },
+    { "rank": 5, "vendor": "TME", "type": "distributor", "region": "EU+India" },
+    { "rank": 6, "vendor": "Sourcengine", "type": "aggregator", "region": "global" },
+    { "rank": 7, "vendor": "Moglix", "type": "B2B marketplace", "region": "India" },
+    { "rank": 8, "vendor": "Evelta", "type": "components", "region": "India" },
+    { "rank": 9, "vendor": "Sunrom", "type": "components", "region": "India" },
+    { "rank": 10, "vendor": "Robocraze", "type": "components", "region": "India" }
+  ],
+
+  "export_formats": ["csv", "excel", "pdf", "json"]
+}
