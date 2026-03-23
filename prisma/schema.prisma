@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Module Profiles ────────────────────────────────────────────────────────
+model ModuleProfile {
+  id              String   @id @default(cuid())
+  name            String
+  technology      String   // e.g. "HJT Bifacial", "PERC", "TOPCon"
+  voc             Float    // Open circuit voltage (V)
+  isc             Float    // Short circuit current (A)
+  pmax            Float    // Max power (W)
+  vmp             Float    // Max power voltage (V)
+  imp             Float    // Max power current (A)
+  tempCoeffVoc    Float?   // Temperature coefficient of Voc (%/°C)
+  tempCoeffIsc    Float?   // Temperature coefficient of Isc (%/°C)
+  bifacialFactor  Float?   // Bifaciality factor (0–1)
+  manufacturer    String?
+  modelNumber     String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  testRecipes     TestRecipe[]
+  bomItems        BOMItem[]
+
+  @@map("module_profiles")
+}
+
+// ─── Test Recipes ────────────────────────────────────────────────────────────
+model TestRecipe {
+  id              String       @id @default(cuid())
+  name            String
+  testType        TestType
+  standard        String       // e.g. "IEC 61215:2021", "IEC TS 62804-1:2025"
+  description     String?
+
+  // TC/HF parameters
+  tempMin         Float?       // Min temperature (°C)
+  tempMax         Float?       // Max temperature (°C)
+  rampRate        Float?       // °C/min
+  dwellTime       Int?         // minutes at each extreme
+  cycles          Int?         // number of cycles
+
+  // LETID parameters
+  irradiance      Float?       // W/m² (typically 1000)
+  cellTemp        Float?       // °C (typically 75)
+  currentFraction Float?       // fraction of Isc injected (0–1)
+  duration        Int?         // hours
+
+  // PID parameters
+  voltageStress   Float?       // V (up to ±4000)
+  humidity        Float?       // %RH
+  temperature     Float?       // °C
+
+  // Common
+  channels        Int          @default(1)
+  powerSupplyType PowerSupplyType
+
+  moduleProfileId String?
+  moduleProfile   ModuleProfile? @relation(fields: [moduleProfileId], references: [id])
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  sourcingLogs    SourcingLog[]
+
+  @@map("test_recipes")
+}
+
+enum TestType {
+  TC    // Thermal Cycling
+  HF    // Humidity Freeze
+  LETID // Light & Elevated Temperature Induced Degradation
+  PID   // Potential Induced Degradation
+  ABSI  // Advanced Backsheet Interconnect
+}
+
+enum PowerSupplyType {
+  TC_HF_BIDIRECTIONAL   // 60V/30A Bidirectional Regenerative
+  LETID_PRECISION       // 60V/2A Precision
+  PID_HIGH_VOLTAGE      // ±4000V DC, nA–mA
+}
+
+// ─── BOM Items ───────────────────────────────────────────────────────────────
+model BOMItem {
+  id               String    @id @default(cuid())
+  bomId            String    // groups items into a BOM set
+  partNumber       String    // internal part number
+  mpn              String?   // manufacturer part number
+  manufacturer     String?
+  description      String
+  quantity         Int
+  unit             String    @default("pcs")
+  category         String?   // e.g. "Semiconductor", "Passive", "Connector"
+  subsystem        String?   // e.g. "TC/HF", "LETID", "PID", "Common"
+
+  // Pricing (INR)
+  unitPriceInr     Float?
+  totalPriceInr    Float?
+
+  // Sourcing
+  primaryVendor    String?
+  indianVendor     String?   // Indian vendor alternative (mandatory per CLAUDE.md)
+  nexarPartId      String?   // Nexar API part ID
+  datasheet        String?   // URL
+
+  // Electrical specs
+  voltage          String?
+  current          String?
+  power            String?
+  tolerance        String?
+  package          String?
+
+  moduleProfileId  String?
+  moduleProfile    ModuleProfile? @relation(fields: [moduleProfileId], references: [id])
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([bomId])
+  @@index([mpn])
+  @@map("bom_items")
+}
+
+// ─── Sourcing Logs ───────────────────────────────────────────────────────────
+model SourcingLog {
+  id              String    @id @default(cuid())
+  sessionId       String?   // Nexar search session
+  query           String    // search query sent to Nexar
+  queryType       String    // "mpn" | "general" | "alternatives"
+  mpn             String?
+  manufacturer    String?
+  results         Json?     // raw Nexar API response
+  selectedPart    Json?     // the part the user selected
+
+  // Pricing snapshot
+  priceInr        Float?
+  priceUsd        Float?
+  availability    Int?      // stock quantity
+  leadTimeDays    Int?
+  vendor          String?
+
+  testRecipeId    String?
+  testRecipe      TestRecipe? @relation(fields: [testRecipeId], references: [id])
+
+  createdAt       DateTime  @default(now())
+
+  @@index([sessionId])
+  @@index([mpn])
+  @@map("sourcing_logs")
+}
