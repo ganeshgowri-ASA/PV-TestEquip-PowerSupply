@@ -1,5 +1,35 @@
 import { GraphQLClient, gql } from 'graphql-request';
 
+const NEXAR_TOKEN_URL = 'https://identity.nexar.com/connect/token';
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+async function getNexarAccessToken(clientId: string, clientSecret: string): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt - 60000) {
+    return cachedToken.token;
+  }
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: clientId,
+    client_secret: clientSecret,
+    scope: 'supply.domain',
+  });
+  const res = await fetch(NEXAR_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Nexar token exchange failed (${res.status}): ${errText}`);
+  }
+  const data = await res.json();
+  cachedToken = {
+    token: data.access_token,
+    expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+  };
+  return cachedToken.token;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const NEXAR_API_URL = 'https://api.nexar.com/graphql';
 export const DEFAULT_USD_TO_INR = 83.5;
@@ -283,10 +313,13 @@ export function createNexarClient(
   apiKey: string,
   usdToInrRate = DEFAULT_USD_TO_INR,
 ) {
-  const client = new GraphQLClient(NEXAR_API_URL, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
-
+  const [clientId, clientSecret] = apiKey.includes(':') ? apiKey.split(':') : [apiKey, ''];
+  async function makeClient(): Promise<GraphQLClient> {
+    const token = await getNexarAccessToken(clientId, clientSecret);
+    return new GraphQLClient(NEXAR_API_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
   /**
    * Search by exact or partial MPN.
    */
@@ -300,7 +333,7 @@ export function createNexarClient(
         }
       }
     `;
-    const data = await client.request<{ supSearchMpn: RawSearchResult }>(query, {
+    const data = await (await makeClient()).request<{ supSearchMpn: RawSearchResult }>(query, {
       q: mpn,
       limit,
     });
@@ -328,7 +361,7 @@ export function createNexarClient(
         }
       }
     `;
-    const data = await client.request<{ supSearch: RawSearchResult }>(query, {
+    const data = await (await makeClient()).request<{ supSearch: RawSearchResult }>(query, {
       q: queryStr,
       limit,
     });
