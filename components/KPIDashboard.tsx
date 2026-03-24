@@ -30,6 +30,17 @@ const KPI_CARDS = [
   },
 ];
 
+const TECH_CARDS = [
+  { tech: 'HJT', icon: 'H', desc: 'Heterojunction', type: 'n-type' },
+  { tech: 'TOPCon', icon: 'T', desc: 'Tunnel Oxide Passivated', type: 'n-type' },
+  { tech: 'PERC', icon: 'P', desc: 'Passivated Emitter Rear', type: 'p-type' },
+  { tech: 'HBC', icon: 'B', desc: 'Back Contact', type: 'n-type' },
+  { tech: 'IBC', icon: 'I', desc: 'Interdigitated Back Contact', type: 'n-type' },
+  { tech: 'Bifacial', icon: 'Bf', desc: 'Bifacial Module', type: 'n/p-type' },
+  { tech: 'Thin Film', icon: 'TF', desc: 'CdTe / CIGS', type: 'thin-film' },
+  { tech: 'Perovskite', icon: 'Pk', desc: 'Tandem / Single', type: 'emerging' },
+];
+
 function getStandardsForTech(tech: string): string[] {
   const base = ['IEC 61215:2021 \u2014 TC / HF'];
   if (['HJT', 'HBC', 'TOPCon', 'PERC', 'Bifacial', 'n-type', 'p-type'].includes(tech)) {
@@ -40,39 +51,6 @@ function getStandardsForTech(tech: string): string[] {
   base.push('Modbus RTU/TCP \u2014 All Power Supplies');
   return base;
 }
-
-interface KPIDashboardProps {
-  selectedModule: PVModule | null;
-  onSelectModule: (mod: PVModule | null) => void;
-}
-
-export default function KPIDashboard({ selectedModule, onSelectModule }: KPIDashboardProps) {
-  const [showSelector, setShowSelector] = useState(false);
-
-  const moduleSpecs = selectedModule
-    ? [
-        { label: 'Technology', value: selectedModule.technology },
-        { label: 'Voc', value: `${selectedModule.Voc}V` },
-        { label: 'Isc', value: `${selectedModule.Isc}A` },
-        { label: 'Pmax', value: `${selectedModule.Pmax}W` },
-        { label: 'Efficiency', value: `${selectedModule.efficiency}%` },
-        { label: 'Channels/Rack', value: '10' },
-      ]
-    : [
-        { label: 'Technology', value: 'Select Module' },
-        { label: 'Voc', value: '\u2014' },
-        { label: 'Isc', value: '\u2014' },
-        { label: 'Pmax', value: '\u2014' },
-        { label: 'Efficiency', value: '\u2014' },
-        { label: 'Channels/Rack', value: '10' },
-      ];
-
-  const standards = selectedModule ? getStandardsForTech(selectedModule.technology) : [
-    'IEC 61215:2021 \u2014 TC / HF / LETID',
-    'IEC TS 62804-1:2025 \u2014 PID',
-    'PVEL LETID Sensitivity Test Protocol',
-    'Modbus RTU/TCP \u2014 All Power Supplies',
-  ];
 
 export default function KPIDashboard() {
   const [selectedModule, setSelectedModule] = useState<PVModule | null>(null);
@@ -86,35 +64,39 @@ export default function KPIDashboard() {
         { label: 'Efficiency', value: `${selectedModule.efficiency}%` },
         { label: 'Standard', value: 'IEC 61215:2021' },
       ]
-    : MODULE_SPECS;
+    : [
+        { label: 'Technology', value: 'Select Module' },
+        { label: 'Voc', value: '\u2014' },
+        { label: 'Isc', value: '\u2014' },
+        { label: 'Pmax', value: '\u2014' },
+        { label: 'Efficiency', value: '\u2014' },
+        { label: 'Standard', value: 'IEC 61215:2021' },
+      ];
 
   const moduleTitle = selectedModule
-    ? `Target Module — ${selectedModule.manufacturer} ${selectedModule.model}`
-    : 'Target Module — HJT Bifacial';
+    ? `Target Module \u2014 ${selectedModule.manufacturer} ${selectedModule.model}`
+    : 'Target Module \u2014 HJT Bifacial';
+
+  const standards = selectedModule
+    ? getStandardsForTech(selectedModule.technology)
+    : [
+        'IEC 61215:2021 \u2014 TC / HF / LETID',
+        'IEC TS 62804-1:2025 \u2014 PID',
+        'PVEL LETID Sensitivity Test Protocol',
+        'Modbus RTU/TCP \u2014 All Power Supplies',
+      ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold mb-1">System KPIs</h2>
-          <p className="text-gray-400 text-sm">Antaryami Solar Analytics \u2014 Power Supply Design Status</p>
+          <p className="text-gray-400 text-sm">Antaryami Solar Analytics &mdash; Power Supply Design Status</p>
         </div>
-        <button
-          onClick={() => setShowSelector(!showSelector)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            showSelector ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-          }`}
-        >
-          {showSelector ? 'Hide Module Selector' : 'Select PV Module'}
-        </button>
       </div>
 
-      {/* Module Selector */}
-      {showSelector && (
-        <ModuleSelector selectedModule={selectedModule} onSelectModule={onSelectModule} />
-      )}
+      <ModuleSelector onSelect={setSelectedModule} selected={selectedModule} />
 
-      {/* Power Supply Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {KPI_CARDS.map((card) => (
           <Card key={card.title}>
@@ -139,10 +121,6 @@ export default function KPIDashboard() {
         ))}
       </div>
 
-      {/* Module Selector */}
-      <ModuleSelector onSelect={setSelectedModule} selected={selectedModule} />
-
-      {/* Module Specs */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{moduleTitle}</CardTitle>
@@ -159,8 +137,7 @@ export default function KPIDashboard() {
         </CardContent>
       </Card>
 
-      {/* Test Matrix */}
-      {selectedModule && (
+      {selectedModule && selectedModule.testLimits && (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm text-gray-400 uppercase tracking-widest">Test Limits Matrix</CardTitle>
@@ -183,7 +160,7 @@ export default function KPIDashboard() {
                     <td className="p-3 text-center text-xs text-gray-400">IEC 61215:2021</td>
                     <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.tc.Vmax.toFixed(1)}V</td>
                     <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.tc.Isc_TC.toFixed(2)}A</td>
-                    <td className="p-3 text-center text-xs text-gray-400">200/400 cycles, -40\u00B0C to +85\u00B0C</td>
+                    <td className="p-3 text-center text-xs text-gray-400">200/400 cycles, -40&deg;C to +85&deg;C</td>
                   </tr>
                   <tr className="border-b border-gray-800">
                     <td className="p-3 text-cyan-400 font-medium">HF (Humidity Freeze)</td>
@@ -197,12 +174,12 @@ export default function KPIDashboard() {
                     <td className="p-3 text-center text-xs text-gray-400">PVEL / IEC 61215</td>
                     <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.letid.Voc.toFixed(1)}V</td>
                     <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.letid.Iinject.toFixed(2)}A (1xIsc)</td>
-                    <td className="p-3 text-center text-xs text-gray-400">{selectedModule.testLimits.letid.cellTemp}\u00B0C cell temp</td>
+                    <td className="p-3 text-center text-xs text-gray-400">{selectedModule.testLimits.letid.cellTemp}&deg;C cell temp</td>
                   </tr>
                   <tr className="border-b border-gray-800">
                     <td className="p-3 text-red-400 font-medium">PID</td>
                     <td className="p-3 text-center text-xs text-gray-400">IEC TS 62804-1:2025</td>
-                    <td className="p-3 text-center font-mono text-xs">\u00B1{selectedModule.testLimits.pid.Vbias}V</td>
+                    <td className="p-3 text-center font-mono text-xs">&plusmn;{selectedModule.testLimits.pid.Vbias}V</td>
                     <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.pid.Imax_leak}mA max leak</td>
                     <td className="p-3 text-center text-xs text-gray-400">{selectedModule.testLimits.pid.duration}hr duration</td>
                   </tr>
@@ -213,7 +190,6 @@ export default function KPIDashboard() {
         </Card>
       )}
 
-      {/* Technology Cards */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm text-gray-400 uppercase tracking-widest">PV Cell Technologies</CardTitle>
@@ -243,7 +219,6 @@ export default function KPIDashboard() {
         </CardContent>
       </Card>
 
-      {/* Standards & Design Principles */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
