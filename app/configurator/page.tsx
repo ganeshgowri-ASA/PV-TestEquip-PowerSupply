@@ -19,6 +19,13 @@ import {
   type PIDConfig,
   type CycleTiming,
 } from '@/lib/calculations';
+import type { jsPDF as JsPDFType } from 'jspdf';
+
+// Augment jsPDF with autoTable plugin methods
+interface JsPDFWithAutoTable extends JsPDFType {
+  autoTable: (options: Record<string, unknown>) => void;
+  lastAutoTable: { finalY: number };
+}
 
 // ─── Timing Diagram SVG Component ───────────────────────────────────────────────
 
@@ -274,7 +281,7 @@ export default function ConfiguratorPage() {
     doc.setFontSize(12);
     doc.setTextColor(0);
     doc.text('Module Profile', 14, 40);
-    (doc as any).autoTable({
+    (doc as JsPDFWithAutoTable).autoTable({
       startY: 44,
       head: [['Parameter', 'Value']],
       body: [
@@ -290,9 +297,9 @@ export default function ConfiguratorPage() {
       headStyles: { fillColor: [30, 58, 138] },
     });
 
-    const y1 = (doc as any).lastAutoTable.finalY + 10;
+    const y1 = (doc as JsPDFWithAutoTable).lastAutoTable.finalY + 10;
     doc.text(`Test: ${s.label} (${s.standard})`, 14, y1);
-    (doc as any).autoTable({
+    (doc as JsPDFWithAutoTable).autoTable({
       startY: y1 + 4,
       head: [['Parameter', 'Value']],
       body: [
@@ -308,9 +315,9 @@ export default function ConfiguratorPage() {
       headStyles: { fillColor: [30, 58, 138] },
     });
 
-    const y2 = (doc as any).lastAutoTable.finalY + 10;
+    const y2 = (doc as JsPDFWithAutoTable).lastAutoTable.finalY + 10;
     doc.text('Power Supply Sizing', 14, y2);
-    (doc as any).autoTable({
+    (doc as JsPDFWithAutoTable).autoTable({
       startY: y2 + 4,
       head: [['Parameter', 'Value']],
       body: [
@@ -325,9 +332,9 @@ export default function ConfiguratorPage() {
     });
 
     if (testType === 'PID' && recipe.pidConfig) {
-      const y3 = (doc as any).lastAutoTable.finalY + 10;
+      const y3 = (doc as JsPDFWithAutoTable).lastAutoTable.finalY + 10;
       doc.text('PID Configuration', 14, y3);
-      (doc as any).autoTable({
+      (doc as JsPDFWithAutoTable).autoTable({
         startY: y3 + 4,
         head: [['Parameter', 'Value']],
         body: [
