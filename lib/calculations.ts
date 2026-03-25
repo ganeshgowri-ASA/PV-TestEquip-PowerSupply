@@ -132,7 +132,7 @@ export const TEST_SPECS: Record<TestType, TestSpec> = {
 export function calculateABSICurrent(isc: number, bifacialityFactor: number): number {
   // Isc_rear is approximated as Isc_front × bifacialityFactor
   const iscRear = isc * bifacialityFactor;
-  return isc + iscRear * bifacialityFactor;
+  return isc + iscRear;
 }
 
 /**
