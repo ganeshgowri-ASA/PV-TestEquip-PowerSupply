@@ -6,9 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/Toast';
-import type { PVModule, Technology } from '@/data/moduleDatabase';
+import type { PVModule } from '@/data/moduleDatabase';
 
-const TECHNOLOGY_OPTIONS: Technology[] = ['PERC', 'TOPCon', 'HJT', 'HBC', 'Bifacial', 'Tandem', 'n-type', 'p-type'];
+const TECHNOLOGY_OPTIONS: string[] = ['PERC', 'TOPCon', 'HJT', 'HBC', 'Bifacial', 'Tandem', 'n-type', 'p-type'];
 
 const PS_TYPES = [
   {
@@ -86,7 +86,7 @@ export default function PowerSupplyControl({ selectedModule }: PowerSupplyContro
   const { toast } = useToast();
   const [selected, setSelected] = useState('tc-hf');
   const [activeChannel, setActiveChannel] = useState(1);
-  const [technology, setTechnology] = useState<Technology>('HJT');
+  const [technology, setTechnology] = useState<string>('HJT');
   const [connected, setConnected] = useState(false);
   const [emergencyStop, setEmergencyStop] = useState(false);
   const [channels, setChannels] = useState<Record<number, ChannelState>>(() => {
@@ -110,11 +110,11 @@ export default function PowerSupplyControl({ selectedModule }: PowerSupplyContro
       for (let i = 1; i <= 10; i++) {
         if (!updated[i].on) {
           if (selected === 'tc-hf') {
-            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.tc.Vmax, current: selectedModule.testLimits.tc.Isc_TC };
+            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.tc.Vmax, current: selectedModule.testLimits.tc.Isc };
           } else if (selected === 'letid') {
             updated[i] = { ...updated[i], voltage: selectedModule.Voc, current: Math.min(selectedModule.Isc, 2) };
           } else if (selected === 'pid') {
-            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.pid.Vbias, current: selectedModule.testLimits.pid.Imax_leak };
+            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.pid.Vbias, current: selectedModule.testLimits.pid.ImaxLeak };
           }
         }
       }
@@ -273,7 +273,7 @@ export default function PowerSupplyControl({ selectedModule }: PowerSupplyContro
       <div className="flex gap-4 flex-wrap">
         <div>
           <label className="text-xs text-gray-500 block mb-1">Technology</label>
-          <select value={technology} onChange={(e) => setTechnology(e.target.value as Technology)}
+          <select value={technology} onChange={(e) => setTechnology(e.target.value as string)}
             className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-sm text-white">
             {TECHNOLOGY_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>

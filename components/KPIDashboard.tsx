@@ -1,10 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { Dispatch, SetStateAction } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import ModuleSelector from '@/components/ModuleSelector';
 import type { PVModule } from '@/data/moduleDatabase';
+
+interface KPIDashboardProps {
+  selectedModule: PVModule | null;
+  onSelectModule: Dispatch<SetStateAction<PVModule | null>>;
+}
 
 const KPI_CARDS = [
   {
@@ -52,8 +57,7 @@ function getStandardsForTech(tech: string): string[] {
   return base;
 }
 
-export default function KPIDashboard() {
-  const [selectedModule, setSelectedModule] = useState<PVModule | null>(null);
+export default function KPIDashboard({ selectedModule, onSelectModule }: KPIDashboardProps) {
 
   const moduleSpecs = selectedModule
     ? [
@@ -95,7 +99,7 @@ export default function KPIDashboard() {
         </div>
       </div>
 
-      <ModuleSelector onSelect={setSelectedModule} selected={selectedModule} />
+      <ModuleSelector onSelect={onSelectModule} selected={selectedModule} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {KPI_CARDS.map((card) => (
@@ -159,14 +163,14 @@ export default function KPIDashboard() {
                     <td className="p-3 text-blue-400 font-medium">TC (Thermal Cycling)</td>
                     <td className="p-3 text-center text-xs text-gray-400">IEC 61215:2021</td>
                     <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.tc.Vmax.toFixed(1)}V</td>
-                    <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.tc.Isc_TC.toFixed(2)}A</td>
+                    <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.tc.Isc.toFixed(2)}A</td>
                     <td className="p-3 text-center text-xs text-gray-400">200/400 cycles, -40&deg;C to +85&deg;C</td>
                   </tr>
                   <tr className="border-b border-gray-800">
                     <td className="p-3 text-cyan-400 font-medium">HF (Humidity Freeze)</td>
                     <td className="p-3 text-center text-xs text-gray-400">IEC 61215:2021</td>
                     <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.hf.Vmax.toFixed(1)}V</td>
-                    <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.hf.Isc_HF.toFixed(2)}A</td>
+                    <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.hf.Isc.toFixed(2)}A</td>
                     <td className="p-3 text-center text-xs text-gray-400">10 cycles, 85%RH</td>
                   </tr>
                   <tr className="border-b border-gray-800">
@@ -180,7 +184,7 @@ export default function KPIDashboard() {
                     <td className="p-3 text-red-400 font-medium">PID</td>
                     <td className="p-3 text-center text-xs text-gray-400">IEC TS 62804-1:2025</td>
                     <td className="p-3 text-center font-mono text-xs">&plusmn;{selectedModule.testLimits.pid.Vbias}V</td>
-                    <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.pid.Imax_leak}mA max leak</td>
+                    <td className="p-3 text-center font-mono text-xs">{selectedModule.testLimits.pid.ImaxLeak}mA max leak</td>
                     <td className="p-3 text-center text-xs text-gray-400">{selectedModule.testLimits.pid.duration}hr duration</td>
                   </tr>
                 </tbody>
