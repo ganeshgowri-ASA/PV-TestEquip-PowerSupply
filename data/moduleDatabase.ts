@@ -199,6 +199,7 @@ export const moduleDatabase: PVModule[] = [
 ];
 
 // Derived lookup helpers
+export type Technology = string;
 export const manufacturers = [...new Set(moduleDatabase.map((m) => m.manufacturer))].sort();
 export const technologies = [...new Set(moduleDatabase.map((m) => m.technology))].sort();
 
