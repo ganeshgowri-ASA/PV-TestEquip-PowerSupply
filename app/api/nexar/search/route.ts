@@ -117,10 +117,23 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = process.env.NEXAR_API_KEY;
-    if (!apiKey) {
+    if (!apiKey || apiKey === 'placeholder' || apiKey === 'your_nexar_api_key_here') {
       return NextResponse.json(
-        { error: 'NEXAR_API_KEY environment variable is not configured' },
-        { status: 500 },
+        {
+          error: 'Nexar API credentials not configured. Please set NEXAR_API_KEY=clientId:clientSecret in Vercel environment variables.',
+          code: 'NEXAR_NOT_CONFIGURED',
+        },
+        { status: 503 },
+      );
+    }
+
+    if (!apiKey.includes(':')) {
+      return NextResponse.json(
+        {
+          error: 'NEXAR_API_KEY must be in the format clientId:clientSecret. Register at nexar.com/api to obtain credentials.',
+          code: 'NEXAR_INVALID_FORMAT',
+        },
+        { status: 503 },
       );
     }
 
@@ -146,6 +159,18 @@ export async function POST(req: NextRequest) {
     console.error('[nexar/search] Error:', error);
     const message =
       error instanceof Error ? error.message : 'Unknown error occurred';
+
+    // Detect OAuth/token errors and return a friendlier message
+    if (message.includes('invalid_client') || message.includes('token exchange failed')) {
+      return NextResponse.json(
+        {
+          error: 'Nexar API authentication failed. The API credentials are invalid. Please verify NEXAR_API_KEY=clientId:clientSecret in your environment variables.',
+          code: 'NEXAR_AUTH_FAILED',
+        },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

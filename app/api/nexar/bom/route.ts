@@ -148,10 +148,13 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = process.env.NEXAR_API_KEY;
-    if (!apiKey) {
+    if (!apiKey || apiKey === 'placeholder' || apiKey === 'your_nexar_api_key_here') {
       return NextResponse.json(
-        { error: 'NEXAR_API_KEY environment variable is not configured' },
-        { status: 500 },
+        {
+          error: 'Nexar API credentials not configured. Please set NEXAR_API_KEY=clientId:clientSecret in Vercel environment variables.',
+          code: 'NEXAR_NOT_CONFIGURED',
+        },
+        { status: 503 },
       );
     }
 
