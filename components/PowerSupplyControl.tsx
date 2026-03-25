@@ -97,7 +97,7 @@ export default function PowerSupplyControl({ selectedModule }: PowerSupplyContro
     return init;
   });
 
-  const ps = PS_TYPES.find((p) => p.id === selected)!;
+  const ps = PS_TYPES.find((p) => p.id === selected) ?? PS_TYPES[0];
   const ch = channels[activeChannel];
 
   // Auto-set limits when module selected

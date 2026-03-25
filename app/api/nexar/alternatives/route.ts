@@ -8,6 +8,8 @@ import {
   type AlternativesResult,
 } from '@/lib/nexar-client';
 
+export const dynamic = 'force-dynamic';
+
 // ─── Request / Response Types ─────────────────────────────────────────────────
 
 interface AlternativesRequestParams {
@@ -107,7 +109,7 @@ function formatOriginal(result: AlternativesResult): OriginalPartResponse | null
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
 
     const mpn = searchParams.get('mpn');
     const limitStr = searchParams.get('limit') ?? '8';
