@@ -103,6 +103,9 @@ function formatOriginal(result: AlternativesResult): OriginalPartResponse | null
   };
 }
 
+// Force dynamic rendering (uses request.url for query params)
+export const dynamic = 'force-dynamic';
+
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
