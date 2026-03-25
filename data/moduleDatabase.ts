@@ -201,6 +201,7 @@ export const moduleDatabase: PVModule[] = [
 // Derived lookup helpers
 export const manufacturers = [...new Set(moduleDatabase.map((m) => m.manufacturer))].sort();
 export const technologies = [...new Set(moduleDatabase.map((m) => m.technology))].sort();
+export type Technology = string;
 
 export function findModulesByManufacturer(name: string): PVModule[] {
   return moduleDatabase.filter((m) => m.manufacturer === name);

@@ -110,11 +110,11 @@ export default function PowerSupplyControl({ selectedModule }: PowerSupplyContro
       for (let i = 1; i <= 10; i++) {
         if (!updated[i].on) {
           if (selected === 'tc-hf') {
-            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.tc.Vmax, current: selectedModule.testLimits.tc.Isc_TC };
+            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.tc.Vmax, current: selectedModule.testLimits.tc.Isc };
           } else if (selected === 'letid') {
             updated[i] = { ...updated[i], voltage: selectedModule.Voc, current: Math.min(selectedModule.Isc, 2) };
           } else if (selected === 'pid') {
-            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.pid.Vbias, current: selectedModule.testLimits.pid.Imax_leak };
+            updated[i] = { ...updated[i], voltage: selectedModule.testLimits.pid.Vbias, current: selectedModule.testLimits.pid.ImaxLeak };
           }
         }
       }
